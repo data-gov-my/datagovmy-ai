@@ -1,0 +1,8 @@
+fastapi
+langchain
+lanarky
+gptcache
+faiss-cpu
+weaviate-client
+dagster
+dagster-webserver
