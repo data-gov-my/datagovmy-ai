@@ -1,1 +1,49 @@
-env
+# Python files
+*.py[cod]
+*.pyd
+*.pyo
+*.pyz
+*.pickle
+*.egg
+*.egg-info/
+dist/
+build/
+__pycache__/
+
+# Development environment
+.venv/
+env/
+*.pyc
+.vscode/
+
+# Pytest
+.coverage
+.htmlcov/
+.tox/
+.pytest_cache/
+test-results/
+
+# FastAPI
+instance/
+.webassets-cache
+
+# Databases
+*.db
+*.sqlite3
+*.sqlite
+
+# OS files
+.DS_Store
+Desktop.ini
+
+# Log files
+*.log
+
+# Environment variables
+.env
+
+# Other
+*.so
+*.swp
+*~
+.ipynb_checkpoints
