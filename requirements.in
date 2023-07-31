@@ -7,3 +7,4 @@ weaviate-client
 dagster
 dagster-webserver
 pandas
+openai
