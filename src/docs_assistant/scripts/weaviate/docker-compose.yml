@@ -1,0 +1,25 @@
+---
+version: "3.4"
+services:
+  weaviate:
+    command:
+      - --host
+      - ${WEAVIATE_HOST}
+      - --port
+      - "${WEAVIATE_PORT}"
+      - --scheme
+      - http
+    image: semitechnologies/weaviate:1.20.2
+    ports:
+      - ${WEAVIATE_PORT}:${WEAVIATE_PORT}
+    restart: on-failure:0
+    environment:
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
+      PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
+      DEFAULT_VECTORIZER_MODULE: "none"
+      CLUSTER_HOSTNAME: "node1"
+      ENABLE_MODULES: "backup-filesystem"
+      BACKUP_FILESYSTEM_PATH: "/tmp/backups"
+    volumes:
+      - ./backups:/tmp/backups
