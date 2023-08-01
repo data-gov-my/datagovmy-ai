@@ -161,6 +161,12 @@ def mdx_vect_remove(mdx_uuids_to_remove: List):
                             index=settings.DOCS_INDEX)
     vect.remove(mdx_uuids_to_remove)
 
+    # update records parquet file
+    df_docs_rec = pd.read_parquet(DOCS_MDX_RECORD_PATH)
+    df_docs_rec = df_docs_rec[~df_docs_rec.uuid.isin(mdx_uuids_to_remove)]
+    logger.info(f'Updating {DOCS_MDX_RECORD_PATH}')
+    df_docs_rec.to_parquet(DOCS_MDX_RECORD_PATH)
+
 # @asset
 # def load_dc_meta() -> pd.DataFrame:
 #     """Check DC Metadata from S3"""
