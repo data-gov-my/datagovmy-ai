@@ -19,7 +19,7 @@ from config import *
 from loaders import MdxLoader
 from vect import WeaviateVectorDB
 
-DOCS_MDX_RECORD_PATH = Path('data/docs_mdx_record.parquet')
+DOCS_MDX_RECORD_PATH = Path(settings.APP_ROOT_PATH) / 'data' / 'docs_mdx_record.parquet'
 
 logger = get_dagster_logger()
 
@@ -69,12 +69,12 @@ def check_repo_changes(repo, path_to_folder, token, last_check):
 
 
 @asset
-def check_github() -> Tuple[List]:
+def check_github() -> Tuple:
     """Check git for modified mdx files"""
     last_check_time = datetime.now() - timedelta(days=1)  # Check for the past 1 day
     added_files, modified_files, removed_files = check_repo_changes(settings.GITHUB_REPO, settings.GITHUB_PATH, 
                                                                     settings.GITHUB_TOKEN, last_check_time)
-    
+    logger.info(f'Added files: {len(added_files)}, Modified files: {len(modified_files)}, Removed files: {len(removed_files)}')
     return (added_files, modified_files, removed_files)
 
 
@@ -99,23 +99,22 @@ def handle_github_checking(check_github):
         recs_to_update.append(df_mdx_added)
     if len(modified_files) > 0:
         logger.info(f'FILES MODIFIED: {len(modified_files)} modified files')
+        # if file modified, delete all headers and add new
         mdx_loader_modified = MdxLoader(modified_files)
         df_mdx_modified = mdx_loader_modified.load()
+        
         for modified_file in modified_files:
-            df_docs_file = df_mdx_modified[df_mdx_modified.source == modified_file]
-            df_docs_rec_file = df_docs_rec[df_docs_rec.source == modified_file]
-            if len(df_docs_file) > len(df_docs_rec_file):
-                # new headers added
-                df_new = df_docs_file.merge(df_docs_rec_file, on='id', how='left',suffixes=['','_'])
-                # Generate UUIDs for the NaN values in the 'uuid' column
-                uuids_for_nan = [str(uuid.uuid4()) for _ in range(df_new['uuid'].isnull().sum())]
-                nan_indices = df_new['uuid'].isnull()
-                df_new.loc[nan_indices, 'uuid'] = uuids_for_nan
-                recs_to_update.append(df_new)
-            else:
-                # headers removed - get uuid 
-                df_new_removed = df_docs_file.merge(df_docs_rec_file, on='id', how='outer',suffixes=['','_'])
-                uuids_to_remove += df_new_removed[df_new_removed.source.isna()].uuid.tolist()
+            path = Path(modified_file)
+            pages_dir = next(p for p in path.parents if p.name == 'pages')
+            modified_file_name = str(path.relative_to(pages_dir))[:-7]
+            
+            # find uuids to remove
+            df_docs_rec_file = df_docs_rec[df_docs_rec.source == modified_file_name]
+            uuids_to_remove += df_docs_rec_file.uuid.to_list()
+            
+            # records to add
+            df_docs_file = df_mdx_modified[df_mdx_modified.source == modified_file_name]
+            recs_to_update.append(df_docs_file)
     if len(removed_files) > 0:
         logger.info(f'FILES REMOVED: {len(removed_files)} removed files')
         # no need to load, simply grab uuid for filnames
@@ -140,7 +139,7 @@ def handle_github_checking(check_github):
 
     if len(uuids_to_remove) > 0:
         logger.info(f'Records to remove: {len(uuids_to_remove)} records')
-        yield Output(uuids_to_remove, output_name="uuids_to_remove")
+        yield Output(uuids_to_remove, output_name="mdx_uuids_to_remove")
 
     
 @asset

@@ -5,6 +5,7 @@ from langchain import FAISS
 from langchain.embeddings import OpenAIEmbeddings
 
 import uuid
+import base64
 import pandas as pd
 from pathlib import Path
 from typing import Protocol, List
@@ -22,6 +23,20 @@ class BaseLoader(Protocol):
     def validate(self):
         """Validate data (needed?)"""
 
+def read_file_from_repo(repo, file_path, token):
+    api_url = f"https://api.github.com/repos/{repo}/contents/{file_path}"
+    headers = {'Authorization': f'token {token}'}
+    
+    # Send the request
+    response = requests.get(api_url, headers=headers)
+    response.raise_for_status()
+
+    file_data = response.json()
+    
+    # Decode the file content from Base64
+    content = base64.b64decode(file_data['content']).decode('utf-8')
+    
+    return content
 
 class MdxLoader(BaseLoader):
     """Implementation of BaseLoader for MDX files."""
@@ -38,8 +53,9 @@ class MdxLoader(BaseLoader):
         """
         all_splitted_text = []
         for mdx_file in self.sources:
-            with open(Path(settings.MDX_ROOT_PATH) / mdx_file, 'r') as file:
-                markdown_input = file.read()
+            # with open(Path(settings.MDX_ROOT_PATH) / mdx_file, 'r') as file:
+            #     markdown_input = file.read()
+            markdown_input = read_file_from_repo(settings.GITHUB_REPO, mdx_file, settings.GITHUB_TOKEN)
 
             headers_to_split_on = [
                 # we're skipping H1 headers here due to clash with # comments in code blocks

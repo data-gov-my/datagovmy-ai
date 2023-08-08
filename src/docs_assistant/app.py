@@ -113,6 +113,7 @@ def create_chain(
         max_tokens=max_tokens,
         temperature=temperature,
         openai_api_key=settings.OPENAI_API_KEY,
+        openai_organization=settings.OPENAI_ORG_ID,
         streaming=True,
         verbose=True,
     )
