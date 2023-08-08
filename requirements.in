@@ -8,3 +8,5 @@ dagster
 dagster-webserver
 pandas
 openai
+pyarrow
+tiktoken
