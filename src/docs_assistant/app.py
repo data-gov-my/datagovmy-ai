@@ -4,6 +4,7 @@ import weaviate
 from enum import StrEnum
 
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from lanarky.responses import StreamingResponse
 from lanarky.routing import LangchainRouter, LLMCacheMode
@@ -146,7 +147,8 @@ def create_chain(
     return retrival_qa_chain_docs
 
 
-router = LangchainRouter(llm_cache_mode=LLMCacheMode.IN_MEMORY)
+# router = LangchainRouter(llm_cache_mode=LLMCacheMode.IN_MEMORY)
+router = LangchainRouter()
 
 
 @router.post(
@@ -167,3 +169,12 @@ def chat(request: ChatRequest):
 
 app = FastAPI()
 app.include_router(router, tags=["chat"])
+
+origins = ['*']
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
