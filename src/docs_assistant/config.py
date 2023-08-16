@@ -3,6 +3,7 @@ from pydantic import BaseSettings, Field
 class Settings(BaseSettings):
     APP_ROOT_PATH: str = Field(..., env='APP_ROOT_PATH')
     OPENAI_API_KEY: str = Field(..., env='OPENAI_API_KEY')
+    OPENAI_ORG_ID: str = Field(..., env='OPENAI_ORG_ID')
     WEAVIATE_URL: str = Field(..., env='WEAVIATE_URL')
     DOCS_INDEX: str = Field(..., env='DOCS_INDEX')
     DC_META_INDEX: str = Field(..., env='DC_META_INDEX')
