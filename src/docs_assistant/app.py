@@ -13,7 +13,6 @@ import langchain
 from langchain.agents import initialize_agent, Tool, AgentType
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores.weaviate import Weaviate
-from langchain.vectorstores import FAISS
 from langchain.chains import RetrievalQA, RetrievalQAWithSourcesChain
 from langchain.chains.qa_with_sources.loading import load_qa_with_sources_chain
 from langchain.prompts import PromptTemplate
@@ -27,6 +26,10 @@ from gptcache.adapter.api import init_similar_cache
 from langchain.cache import GPTCache
 import hashlib
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 def get_hashed_name(name):
     return hashlib.sha256(name.encode()).hexdigest()
 
@@ -35,7 +38,10 @@ def init_gptcache(cache_obj: Cache, llm: str):
     hashed_llm = get_hashed_name(llm)
     init_similar_cache(cache_obj=cache_obj, data_dir=f"similar_cache_{hashed_llm}")
 
-langchain.llm_cache = GPTCache(init_gptcache)
+# langchain.llm_cache = GPTCache(init_gptcache) # creates a faiss index, onnx pytorch stuff locally if enabled
+
+# maximum history of messages for memory
+MAX_MESSAGES = 5
 
 logger = logging.getLogger(__name__)
 
@@ -60,10 +66,7 @@ class ChatRequest(BaseModel):
 
 
 def create_chain(
-    model: str,
     messages: list[Message],
-    max_tokens: int,
-    temperature: float,
 ):
     from langchain.chat_models import ChatOpenAI
     from langchain.memory import ConversationBufferMemory
@@ -83,18 +86,14 @@ def create_chain(
         SystemMessage,
     )
     
-    system_prompt = next(
-        (message.content for message in messages if message.role == Role.SYSTEM),
-        QA_DOCS_ASSISTANT,
-    )
+
     chat_prompt = ChatPromptTemplate.from_messages(
         [
-            SystemMessagePromptTemplate.from_template(system_prompt),
+            SystemMessagePromptTemplate.from_template(QA_DOCS_ASSISTANT_ALT),
             MessagesPlaceholder(variable_name="history"),
             HumanMessagePromptTemplate.from_template("{query}"),
         ]
     )
-    print(chat_prompt)
 
     chat_memory = ChatMessageHistory()
     for message in messages:
@@ -104,15 +103,20 @@ def create_chain(
             chat_memory.add_ai_message(message.content)
 
     memory = ConversationBufferMemory(
-        chat_memory=chat_memory, return_messages=True
+        chat_memory=chat_memory,
+        return_messages=True,
+        memory_key="history",
+        input_key="query", 
     )
-    print(chat_memory)
 
-    oai_embeddings = OpenAIEmbeddings(openai_api_key=settings.OPENAI_API_KEY)
+    embedding_llm = OpenAIEmbeddings(
+        openai_api_key=settings.OPENAI_API_KEY,
+        openai_organization=settings.OPENAI_ORG_ID)
+    
     llm = ChatOpenAI(
-        model=model,
-        max_tokens=max_tokens,
-        temperature=temperature,
+        model='gpt-3.5-turbo',
+        max_tokens=1000,
+        temperature=0,
         openai_api_key=settings.OPENAI_API_KEY,
         openai_organization=settings.OPENAI_ORG_ID,
         streaming=True,
@@ -125,23 +129,23 @@ def create_chain(
     weaviate_docs = Weaviate(client, 
         settings.DOCS_INDEX, # capitalized
         "text", # constant
-        embedding=oai_embeddings,
+        embedding=embedding_llm,
         attributes=attributes,
         by_text=False # force vector search
     )
 
-    qa_prompt_docs = PromptTemplate.from_template(QA_DOCS_ASSISTANT)
     qa_chain_docs = load_qa_with_sources_chain(
-        llm = llm,
-        chain_type = "stuff",
-        prompt=qa_prompt_docs, # for stuff
-        # promp = chat_prompt,
-        # memory = memory,
-        verbose = True
+        llm=llm,
+        chain_type="stuff",
+        # prompt=qa_prompt_docs,
+        prompt=chat_prompt,
+        memory=memory,
+        verbose=True
     )
     retrival_qa_chain_docs = RetrievalQAWithSourcesChain(
         combine_documents_chain=qa_chain_docs, 
         retriever=weaviate_docs.as_retriever(),
+        question_key='query'
     )
     
     return retrival_qa_chain_docs
@@ -157,13 +161,10 @@ router = LangchainRouter()
     description="Chat with OpenAI's chat models using Langchain",
 )
 def chat(request: ChatRequest):
+
     chain = create_chain(
-        model=request.model,
-        messages=request.messages[:-1],
-        max_tokens=request.max_tokens,
-        temperature=request.temperature
+        messages=request.messages[-MAX_MESSAGES-1:-1]
     )
-    # print(request.messages)
     return StreamingResponse.from_chain(chain, request.messages[-1].content)
 
 
