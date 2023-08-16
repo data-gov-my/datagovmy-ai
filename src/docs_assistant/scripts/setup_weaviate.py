@@ -2,7 +2,7 @@ import weaviate
 import argparse
 
 def restore_data(backup_id: str,
-                url="http://localhost:8080") -> None:
+                url: str) -> None:
 
     client = weaviate.Client(url)
 
@@ -13,7 +13,7 @@ def restore_data(backup_id: str,
 
 if __name__ == "__main__":
     # example usage
-    # python backup_script.py your_backup_id_here --url http://localhost:8080"
+    # python backup_script.py your_backup_id_here --url <url here>"
     parser = argparse.ArgumentParser(description="Setup weaviate client")
     parser.add_argument("backup_id", type=str, help="Specify the backup ID as a string.")
     parser.add_argument("--url", type=str, help="Specify weaviate URL for the backup (optional).")
