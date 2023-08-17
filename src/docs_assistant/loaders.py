@@ -24,7 +24,18 @@ class BaseLoader(Protocol):
         """Validate data (needed?)"""
 
 
-def read_file_from_repo(repo, file_path, token):
+def read_file_from_repo(repo: str, file_path: str, token: str):
+    """Read file from GitHub repo.
+
+    Args:
+        repo (str): GitHub repo name
+        file_path (str): path to file in repo
+        token (str): GitHub token
+
+    Returns:
+        str: file content
+    """
+
     api_url = f"https://api.github.com/repos/{repo}/contents/{file_path}"
     headers = {"Authorization": f"token {token}"}
 

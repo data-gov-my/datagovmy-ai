@@ -8,6 +8,8 @@ from config import *
 
 # Text Utils
 def extract_line_without_hash(markdown_string: str) -> Optional[str]:
+    """Extract the first line of a markdown string without the "#" symbol"""
+
     # Split the multiline string into lines
     lines = markdown_string.split("\n")
 

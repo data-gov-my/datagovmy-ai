@@ -1,7 +1,6 @@
 from dagster import (
     AssetIn,
     AssetOut,
-    MetadataValue,
     Output,
     asset,
     multi_asset,
@@ -24,12 +23,16 @@ DOCS_MDX_RECORD_PATH = Path(settings.APP_ROOT_PATH) / "data" / "docs_mdx_record.
 logger = get_dagster_logger()
 
 
-def parse_github_date(date_str):
+def parse_github_date(date_str: str) -> datetime:
     """Convert GitHub API date format to datetime object"""
     return datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%SZ")
 
 
-def check_repo_changes(repo, path_to_folder, token, last_check):
+def check_repo_changes(
+    repo: str, path_to_folder: str, token: str, last_check: datetime
+) -> Tuple:
+    """Check the repo for changes since the last check"""
+
     api_url = f"https://api.github.com/repos/{repo}/commits"
     headers = {"Authorization": f"token {token}"}
 
@@ -165,7 +168,7 @@ def mdx_vect_update(mdx_recs_to_update: pd.DataFrame) -> None:
 
 
 @asset
-def mdx_vect_remove(mdx_uuids_to_remove: List):
+def mdx_vect_remove(mdx_uuids_to_remove: List) -> None:
     """Remove mdx from vectorstore [Optional]"""
     mdx_fields = ["header", "source"]
     vect = WeaviateVectorDB(

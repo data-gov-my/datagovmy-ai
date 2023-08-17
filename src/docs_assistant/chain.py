@@ -1,4 +1,5 @@
 import weaviate
+from langchain.chains import RetrievalQA, RetrievalQAWithSourcesChain
 
 from prompts import *
 from schema import *
@@ -7,7 +8,7 @@ from config import *
 
 def create_chain(
     messages: list[Message],
-):
+) -> RetrievalQAWithSourcesChain:
     from langchain.chat_models import ChatOpenAI
     from langchain.embeddings.openai import OpenAIEmbeddings
     from langchain.memory import ConversationBufferMemory
