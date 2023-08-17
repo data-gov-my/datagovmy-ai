@@ -70,34 +70,6 @@ def create_chain(
         SystemMessage,
     )
 
-    # for caching
-    # # TODO: abstract GPT cache stuff
-    from gptcache import cache
-    from gptcache.embedding import Onnx
-    from gptcache.manager import CacheBase, VectorBase, get_data_manager
-    from gptcache.similarity_evaluation.distance import SearchDistanceEvaluation
-    from gptcache.adapter.langchain_models import LangChainLLMs, LangChainChat
-    from gptcache.embedding import OpenAI
-    from gptcache.processor.pre import get_messages_last_content
-
-    # get the content(only question) form the prompt to cache
-    def get_content_func(data, **_):
-        print('get_content_func data', data)
-        return data.get("prompt").split("Question")[-1]
-
-    onnx = Onnx()
-    openai = OpenAI()
-    cache_base = CacheBase('sqlite')
-    vector_base = VectorBase('weaviate', url='http://127.0.0.1:8080', dimension=openai.dimension, class_name='Cache_v1')
-    data_manager = get_data_manager(cache_base, vector_base)
-    cache.init(
-        pre_embedding_func=get_messages_last_content,
-        embedding_func=openai.to_embeddings,
-        data_manager=data_manager,
-        similarity_evaluation=SearchDistanceEvaluation(),
-        )
-    cache.set_openai_key()
-
     chat_prompt = ChatPromptTemplate.from_messages(
         [
             SystemMessagePromptTemplate.from_template(QA_DOCS_ASSISTANT_ALT),
@@ -133,8 +105,6 @@ def create_chain(
         streaming=True,
         verbose=True,
     )
-    # wrap with GPTCache LLM
-    # llm = LangChainChat(chat=llm)
 
     # connect to weaviate instance
     client = weaviate.Client(url=settings.WEAVIATE_URL)

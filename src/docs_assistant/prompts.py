@@ -24,4 +24,4 @@ Be courteous and respond to greetings. If user says thank you, respond with "You
 Summaries:\"""
 
 {summaries}
-\""""""
+\"\"\""""
