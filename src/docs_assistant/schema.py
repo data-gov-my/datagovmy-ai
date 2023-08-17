@@ -1,6 +1,7 @@
 from enum import StrEnum
 from pydantic import BaseModel, constr
 
+
 class Role(StrEnum):
     SYSTEM = "system"
     ASSISTANT = "assistant"

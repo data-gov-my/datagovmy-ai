@@ -20,23 +20,21 @@ MAX_MESSAGES = 5
 # router = LangchainRouter(llm_cache_mode=LLMCacheMode.IN_MEMORY)
 router = LangchainRouter()
 
+
 @router.post(
     "/chat",
     summary="OpenAPI Docs Assistant",
     description="Chat with the openAPI documentation assistant",
 )
 def chat(request: ChatRequest):
-
-    chain = create_chain(
-        messages=request.messages[-MAX_MESSAGES-1:-1]
-    )
+    chain = create_chain(messages=request.messages[-MAX_MESSAGES - 1 : -1])
     return StreamingResponse.from_chain(chain, request.messages[-1].content)
 
 
 app = FastAPI()
 app.include_router(router, tags=["chat"])
 
-origins = ['*']
+origins = ["*"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,

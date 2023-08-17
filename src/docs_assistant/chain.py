@@ -4,6 +4,7 @@ from prompts import *
 from schema import *
 from config import *
 
+
 def create_chain(
     messages: list[Message],
 ):
@@ -40,15 +41,16 @@ def create_chain(
         chat_memory=chat_memory,
         return_messages=True,
         memory_key="history",
-        input_key="query", 
+        input_key="query",
     )
 
     embedding_llm = OpenAIEmbeddings(
         openai_api_key=settings.OPENAI_API_KEY,
-        openai_organization=settings.OPENAI_ORG_ID)
-    
+        openai_organization=settings.OPENAI_ORG_ID,
+    )
+
     llm = ChatOpenAI(
-        model='gpt-3.5-turbo',
+        model="gpt-3.5-turbo",
         max_tokens=1000,
         temperature=0,
         openai_api_key=settings.OPENAI_API_KEY,
@@ -59,27 +61,23 @@ def create_chain(
 
     # connect to weaviate instance
     client = weaviate.Client(url=settings.WEAVIATE_URL)
-    attributes = ['header', 'source']
-    weaviate_docs = Weaviate(client, 
-        settings.DOCS_INDEX, # capitalized
-        "text", # constant
+    attributes = ["header", "source"]
+    weaviate_docs = Weaviate(
+        client,
+        settings.DOCS_INDEX,  # capitalized
+        "text",  # constant
         embedding=embedding_llm,
         attributes=attributes,
-        by_text=False # force vector search
+        by_text=False,  # force vector search
     )
 
     qa_chain_docs = load_qa_with_sources_chain(
-        llm=llm,
-        chain_type="stuff",
-        prompt=chat_prompt,
-        memory=memory,
-        verbose=True
+        llm=llm, chain_type="stuff", prompt=chat_prompt, memory=memory, verbose=True
     )
     retrival_qa_chain_docs = RetrievalQAWithSourcesChain(
-        combine_documents_chain=qa_chain_docs, 
+        combine_documents_chain=qa_chain_docs,
         retriever=weaviate_docs.as_retriever(),
-        question_key='query'
+        question_key="query",
     )
-    
-    return retrival_qa_chain_docs
 
+    return retrival_qa_chain_docs
