@@ -85,18 +85,17 @@ def create_chain(
         print('get_content_func data', data)
         return data.get("prompt").split("Question")[-1]
 
-    onnx = Onnx()
-    openai = OpenAI()
-    cache_base = CacheBase('sqlite')
-    vector_base = VectorBase('weaviate', url='http://127.0.0.1:8080', dimension=openai.dimension, class_name='Cache_v1')
-    data_manager = get_data_manager(cache_base, vector_base)
-    cache.init(
-        pre_embedding_func=get_messages_last_content,
-        embedding_func=openai.to_embeddings,
-        data_manager=data_manager,
-        similarity_evaluation=SearchDistanceEvaluation(),
-        )
-    cache.set_openai_key()
+    # openai = OpenAI()
+    # cache_base = CacheBase('sqlite')
+    # vector_base = VectorBase('weaviate', url='http://127.0.0.1:8080', dimension=openai.dimension, class_name='Cache_v1')
+    # data_manager = get_data_manager(cache_base, vector_base)
+    # cache.init(
+    #     pre_embedding_func=get_messages_last_content,
+    #     embedding_func=openai.to_embeddings,
+    #     data_manager=data_manager,
+    #     similarity_evaluation=SearchDistanceEvaluation(),
+    #     )
+    # cache.set_openai_key()
 
     chat_prompt = ChatPromptTemplate.from_messages(
         [
@@ -164,14 +163,14 @@ def create_chain(
     return retrival_qa_chain_docs
 
 
-# router = LangchainRouter(llm_cache_mode=LLMCacheMode.IN_MEMORY)
-router = LangchainRouter()
+router = LangchainRouter(llm_cache_mode=LLMCacheMode.GPTCACHE)
+# router = LangchainRouter()
 
 
 @router.post(
     "/chat",
-    summary="Langchain Chat",
-    description="Chat with OpenAI's chat models using Langchain",
+    summary="OpenAPI Docs Assistant",
+    description="Chat with the openAPI documentation assistant",
 )
 def chat(request: ChatRequest):
 
