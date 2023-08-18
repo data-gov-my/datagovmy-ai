@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
 from lanarky.responses import StreamingResponse
 from lanarky.routing import LangchainRouter, LLMCacheMode
@@ -24,11 +24,22 @@ router = LangchainRouter()
 @router.post(
     "/chat",
     summary="OpenAPI Docs Assistant",
-    description="Chat with the openAPI documentation assistant",
+    description="Chat with the open API documentation assistant",
 )
 def chat(request: ChatRequest):
     chain = create_chain(messages=request.messages[-MAX_MESSAGES - 1 : -1])
     return StreamingResponse.from_chain(chain, request.messages[-1].content)
+
+
+@router.get(
+    "/health",
+    summary="Health Check for ELB",
+    response_description="Return HTTP Status Code 200 (OK)",
+    status_code=status.HTTP_200_OK,
+    response_model=HealthCheck,
+)
+def get_health() -> HealthCheck:
+    return HealthCheck(status="OK")
 
 
 app = FastAPI()

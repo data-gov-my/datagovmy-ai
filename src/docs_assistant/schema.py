@@ -14,7 +14,8 @@ class Message(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    model: str
     messages: list[Message]
-    max_tokens: int
-    temperature: float
+
+
+class HealthCheck(BaseModel):
+    status: str = "OK"
