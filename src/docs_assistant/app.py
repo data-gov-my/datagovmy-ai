@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 
 security = HTTPBearer()
 
+
 class Role(StrEnum):
     SYSTEM = "system"
     ASSISTANT = "assistant"
@@ -82,7 +83,7 @@ def create_chain(
 
     # get the content(only question) form the prompt to cache
     def get_content_func(data, **_):
-        print('get_content_func data', data)
+        print("get_content_func data", data)
         return data.get("prompt").split("Question")[-1]
 
     # openai = OpenAI()
@@ -116,15 +117,16 @@ def create_chain(
         chat_memory=chat_memory,
         return_messages=True,
         memory_key="history",
-        input_key="query", 
+        input_key="query",
     )
 
     embedding_llm = OpenAIEmbeddings(
         openai_api_key=settings.OPENAI_API_KEY,
-        openai_organization=settings.OPENAI_ORG_ID)
-    
+        openai_organization=settings.OPENAI_ORG_ID,
+    )
+
     llm = ChatOpenAI(
-        model='gpt-3.5-turbo',
+        model="gpt-3.5-turbo",
         max_tokens=1000,
         temperature=0,
         openai_api_key=settings.OPENAI_API_KEY,
@@ -137,13 +139,14 @@ def create_chain(
 
     # connect to weaviate instance
     client = weaviate.Client(url=settings.WEAVIATE_URL)
-    attributes = ['header', 'source']
-    weaviate_docs = Weaviate(client, 
-        settings.DOCS_INDEX, # capitalized
-        "text", # constant
+    attributes = ["header", "source"]
+    weaviate_docs = Weaviate(
+        client,
+        settings.DOCS_INDEX,  # capitalized
+        "text",  # constant
         embedding=embedding_llm,
         attributes=attributes,
-        by_text=False # force vector search
+        by_text=False,  # force vector search
     )
 
     qa_chain_docs = load_qa_with_sources_chain(
@@ -152,18 +155,18 @@ def create_chain(
         # prompt=qa_prompt_docs,
         prompt=chat_prompt,
         memory=memory,
-        verbose=True
+        verbose=True,
     )
     retrival_qa_chain_docs = RetrievalQAWithSourcesChain(
-        combine_documents_chain=qa_chain_docs, 
+        combine_documents_chain=qa_chain_docs,
         retriever=weaviate_docs.as_retriever(),
-        question_key='query'
+        question_key="query",
     )
-    
+
     return retrival_qa_chain_docs
 
 
-router = LangchainRouter(llm_cache_mode=LLMCacheMode.GPTCACHE)
+router = LangchainRouter(llm_cache_mode=LLMCacheMode.IN_MEMORY)
 # router = LangchainRouter()
 
 
@@ -173,17 +176,14 @@ router = LangchainRouter(llm_cache_mode=LLMCacheMode.GPTCACHE)
     description="Chat with the openAPI documentation assistant",
 )
 def chat(request: ChatRequest):
-
-    chain = create_chain(
-        messages=request.messages[-MAX_MESSAGES-1:-1]
-    )
+    chain = create_chain(messages=request.messages[-MAX_MESSAGES - 1 : -1])
     return StreamingResponse.from_chain(chain, request.messages[-1].content)
 
 
 app = FastAPI()
 app.include_router(router, tags=["chat"])
 
-origins = ['*']
+origins = ["*"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
