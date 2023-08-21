@@ -31,7 +31,7 @@ class APIKeyManager:
     async def update_key(self, api_key):
         # encrypted_key = self.encrypt_key(api_key)
         with open(self.key_file_path, "w") as file:
-            file.write(bytes(api_key, "utf-8"))
+            file.write(api_key)
         # invalidate cache
         await FastAPICache.clear(namespace="token")
 
