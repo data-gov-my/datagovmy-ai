@@ -67,8 +67,6 @@ class MdxLoader(BaseLoader):
         """
         all_splitted_text = []
         for mdx_file in self.sources:
-            # with open(Path(settings.MDX_ROOT_PATH) / mdx_file, 'r') as file:
-            #     markdown_input = file.read()
             markdown_input = read_file_from_repo(
                 settings.GITHUB_REPO, mdx_file, settings.GITHUB_TOKEN
             )

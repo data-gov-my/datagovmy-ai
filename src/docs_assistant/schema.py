@@ -19,3 +19,11 @@ class ChatRequest(BaseModel):
 
 class HealthCheck(BaseModel):
     status: str = "OK"
+
+
+class TokenUpdate(BaseModel):
+    ROLLING_TOKEN: str
+
+
+class TokenUpdateResponse(BaseModel):
+    message: str
