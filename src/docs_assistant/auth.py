@@ -2,13 +2,10 @@ from cryptography.fernet import Fernet
 
 from config import *
 
-from fastapi import Depends, FastAPI, status, Security, HTTPException
+from fastapi import Depends, status, HTTPException
 from fastapi.security.http import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi_cache.decorator import cache
 from fastapi_cache import FastAPICache
-from fastapi_cache.backends.redis import RedisBackend
-
-from redis import asyncio as aioredis
 
 get_bearer_token = HTTPBearer(auto_error=False)
 

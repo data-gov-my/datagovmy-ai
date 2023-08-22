@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import logging
 from fastapi import Depends, FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security.api_key import APIKey
@@ -23,6 +23,14 @@ load_dotenv()
 
 # maximum history of messages for memory
 MAX_MESSAGES = 5
+
+
+class EndpointFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        return record.args and len(record.args) >= 3 and record.args[2] != "/health"
+
+
+logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
 
 # router = LangchainRouter(llm_cache_mode=LLMCacheMode.IN_MEMORY)
 router = LangchainRouter()
