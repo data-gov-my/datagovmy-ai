@@ -12,5 +12,6 @@ if [ ! -d ${CD_INSTALL_TARGET}/env ]; then
     python -m venv $CD_INSTALL_TARGET/env
     source env/bin/activate
     pip install -r requirements.txt
+fi
 
 echo "[${DATESTAMP}] post install step completed"
