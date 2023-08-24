@@ -2,7 +2,7 @@ version: 0.0
 os: linux
 files:
   - source: .
-    destination: /home/ubuntu/datagovmy-ai-deploy
+    destination: /home/ubuntu/datagovmy-ai
 hooks:
   # This deployment lifecycle event occurs even before the application revision
   # is downloaded. You can specify scripts for this event to gracefully stop the
