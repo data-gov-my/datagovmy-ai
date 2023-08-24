@@ -10,3 +10,5 @@ pandas
 openai
 pyarrow
 tiktoken
+redis
+fastapi-cache2[redis]
