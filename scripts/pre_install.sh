@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 DATESTAMP="$(date +%FT%H:%m)"
-CD_INSTALL_TARGET=/home/ubuntu/datagovmy-ai-deploy
+CD_INSTALL_TARGET=/home/ubuntu/datagovmy-ai
 DEPLOY_TEMP=/home/ubuntu/deploy-tmp
 DOCS_API_ROOT=${CD_INSTALL_TARGET}/src/docs_assistant
 DOCS_API_ENV=${DOCS_API_ROOT}/.env
