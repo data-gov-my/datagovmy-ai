@@ -19,7 +19,7 @@ def notify_on_run_failure(context: RunFailureSensorContext) -> None:
     monitored_jobs=[
         JobSelector(
             location_name="defs",
-            job_name="load_job",
+            job_name="load_docs_job",
         )
     ],
     run_status=DagsterRunStatus.SUCCESS,
