@@ -12,21 +12,21 @@ hooks:
   ApplicationStop:
     - location: scripts/stop.sh
       timeout: 300
-      runas: root
+      runas: ubuntu
 
   # You can use this deployment lifecycle event for preinstall tasks,
   # such as decrypting files and creating a backup of the current version.
   # BeforeInstall:
   #   - location: scripts/pre_install.sh
   #     timeout: 300
-  #     runas: root
+  #     runas: ubuntu
 
   # You can use this deployment lifecycle event for tasks such as configuring
   # your application or changing file permissions.
   AfterInstall:
     - location: scripts/post_install.sh
       timeout: 300
-      runas: root
+      runas: ubuntu
 
   # You typically use this deployment lifecycle event to restart services that
   # were stopped during ApplicationStop
@@ -34,4 +34,4 @@ hooks:
     - location: scripts/start.sh
       #- location: scripts/notify_post_start.sh
       timeout: 300
-      runas: root
+      runas: ubuntu
