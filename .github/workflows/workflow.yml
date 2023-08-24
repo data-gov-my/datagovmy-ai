@@ -31,5 +31,5 @@ jobs:
           to: ${{ secrets.TELEGRAM_CHAT_ID }}
           token: ${{ secrets.TELEGRAM_TOKEN }}
           message: |
-            Production Deployment
+            Production Deployment: API
             See changes: https://github.com/${{ github.repository }}/commit/${{github.sha}}
