@@ -24,3 +24,12 @@ jobs:
             --deployment-group-name AiDocsApiGroup \
             --deployment-config-name CodeDeployDefault.OneAtATime \
             --github-location repository=${{ github.repository }},commitId=${{ github.sha }}
+      # Step 3
+      - name: Send Telegram Notification
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          message: |
+            Production Deployment
+            See changes: https://github.com/${{ github.repository }}/commit/${{github.sha}}
