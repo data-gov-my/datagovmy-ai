@@ -11,10 +11,10 @@ BIN_FILE=${DOCS_API_ROOT}/key.bin
 # update permissions
 sudo chown -R ubuntu:ubuntu ${CD_INSTALL_TARGET}
 
+cd $CD_INSTALL_TARGET
 # setup python environment if doesn't exist
 if [ ! -d "${CD_INSTALL_TARGET}/env" ]; then
-    cd $CD_INSTALL_TARGET
-    python -m venv $CD_INSTALL_TARGET/env
+    /home/ubuntu/.pyenv/shims/python -m venv $CD_INSTALL_TARGET/env
 fi
 source env/bin/activate
 pip install -r requirements.txt
