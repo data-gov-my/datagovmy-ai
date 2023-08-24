@@ -7,6 +7,9 @@ DOCS_API_ROOT=${CD_INSTALL_TARGET}/src/docs_assistant
 DOCS_API_ENV=${DOCS_API_ROOT}/.env
 WEAVIATE_ENV=${DOCS_API_ROOT}/scripts/weaviate/.env
 
+# update permissions
+sudo chown -R ubuntu:ubuntu ${CD_INSTALL_TARGET}
+
 # setup python environment
 cd $CD_INSTALL_TARGET
 python -m venv $CD_INSTALL_TARGET/env
