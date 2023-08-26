@@ -36,7 +36,7 @@ def check_repo_changes(
     api_url = f"https://api.github.com/repos/{repo}/commits"
     headers = {"Authorization": f"token {token}"}
 
-    # Get the list of commits
+    # get the list of commits
     response = requests.get(api_url, headers=headers)
     response.raise_for_status()
 
@@ -48,21 +48,19 @@ def check_repo_changes(
 
     for commit in commits:
         commit_date = parse_github_date(commit["commit"]["committer"]["date"])
-        # If the commit was after the last check
+        # if the commit was after the last check
         if commit_date > last_check:
-            # Get the commit details
             commit_url = commit["url"]
             commit_response = requests.get(commit_url, headers=headers)
             commit_response.raise_for_status()
             commit_data = commit_response.json()
 
-            # Check each file in the commit
+            # check each file in the commit
             for file in commit_data["files"]:
-                # If the file is in the specified folder and is an .mdx file
                 if file["filename"].startswith(path_to_folder) and file[
                     "filename"
                 ].endswith(".mdx"):
-                    # Depending on the status of the file, add it to the appropriate list
+                    # depending on the status of the file, add it to the appropriate list
                     if file["status"] == "added":
                         added_files.append(file["filename"])
                     elif file["status"] == "modified":
@@ -77,12 +75,21 @@ def check_repo_changes(
 def check_github() -> Tuple:
     """Check git for modified mdx files"""
     last_check_time = datetime.now() - timedelta(days=1)  # Check for the past 1 day
-    added_files, modified_files, removed_files = check_repo_changes(
+    added_files_main, modified_files_main, removed_files_main = check_repo_changes(
         settings.GITHUB_REPO,
         settings.GITHUB_PATH,
         settings.GITHUB_TOKEN,
         last_check_time,
     )
+    added_files_local, modified_files_local, removed_files_local = check_repo_changes(
+        settings.GITHUB_REPO_LOCAL,
+        settings.GITHUB_PATH_LOCAL,
+        settings.GITHUB_TOKEN,
+        last_check_time,
+    )
+    added_files = added_files_main + added_files_local
+    modified_files = modified_files_main + modified_files_local
+    removed_files = removed_files_main + removed_files_local
     logger.info(
         f"Added files: {len(added_files)}, Modified files: {len(modified_files)}, Removed files: {len(removed_files)}"
     )
