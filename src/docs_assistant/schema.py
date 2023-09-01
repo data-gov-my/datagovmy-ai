@@ -8,12 +8,18 @@ class Role(StrEnum):
     USER = "user"
 
 
+class ChainType(StrEnum):
+    DOCS = "docs"
+    MAIN = "main"
+
+
 class Message(BaseModel):
     role: constr(regex=f"^({Role.ASSISTANT}|{Role.USER}|{Role.SYSTEM})$")  # noqa: E501
     content: str
 
 
 class ChatRequest(BaseModel):
+    chain_type: ChainType = ChainType.DOCS
     messages: list[Message]
 
 
