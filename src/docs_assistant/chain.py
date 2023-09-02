@@ -1,5 +1,5 @@
 import weaviate
-from langchain.chains import RetrievalQA, RetrievalQAWithSourcesChain
+from langchain.chains import RetrievalQAWithSourcesChain
 
 from prompts import *
 from schema import *
@@ -7,6 +7,7 @@ from config import *
 
 
 def create_chain(
+    chain_type: ChainType,
     messages: list[Message],
 ) -> RetrievalQAWithSourcesChain:
     from langchain.chat_models import ChatOpenAI
@@ -23,9 +24,24 @@ def create_chain(
         SystemMessagePromptTemplate,
     )
 
+    chain_config = {
+        ChainType.DOCS: {
+            "system_message": QA_DOCS_PREFIX,
+            "vector_index": settings.DOCS_VINDEX,
+            "vector_attr": ["header", "source"],
+        },
+        ChainType.MAIN: {
+            "system_message": QA_DATA_PREFIX,
+            "vector_index": settings.DC_META_VINDEX,  # to replace with DATA_VINDEX
+            "vector_attr": ["name", "description", "category", "agency", "source"],
+        },
+    }
+
     chat_prompt = ChatPromptTemplate.from_messages(
         [
-            SystemMessagePromptTemplate.from_template(QA_DOCS_ASSISTANT_ALT),
+            SystemMessagePromptTemplate.from_template(
+                chain_config[chain_type]["system_message"] + QA_SUFFIX
+            ),
             MessagesPlaceholder(variable_name="history"),
             HumanMessagePromptTemplate.from_template("{query}"),
         ]
@@ -62,10 +78,10 @@ def create_chain(
 
     # connect to weaviate instance
     client = weaviate.Client(url=settings.WEAVIATE_URL)
-    attributes = ["header", "source"]
+    attributes = chain_config[chain_type]["vector_attr"]
     weaviate_docs = Weaviate(
         client,
-        settings.DOCS_INDEX,  # capitalized
+        chain_config[chain_type]["vector_index"],
         "text",  # constant
         embedding=embedding_llm,
         attributes=attributes,
