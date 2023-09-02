@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 
 from config import *
 from auth import APIKeyManager, get_token, get_master_token, key_manager
-from schema import ChatRequest, HealthCheck, TokenUpdate, TokenUpdateResponse
+from schema import ChatRequest, HealthCheck, TokenUpdate, TokenUpdateResponse, ChainType
 from chain import create_chain
 
 load_dotenv()
@@ -43,7 +43,9 @@ router = LangchainRouter()
 )
 def chat(request: ChatRequest, api_key: APIKey = Depends(get_token)):
     # take only latest MAX_MESSAGES
-    chain = create_chain(messages=request.messages[-MAX_MESSAGES - 1 : -1])
+    chain = create_chain(
+        chain_type=request.chain_type, messages=request.messages[-MAX_MESSAGES - 1 : -1]
+    )
     return StreamingResponse.from_chain(chain, request.messages[-1].content)
 
 

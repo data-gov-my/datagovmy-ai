@@ -169,7 +169,7 @@ def mdx_vect_update(mdx_recs_to_update: pd.DataFrame) -> None:
     vect = WeaviateVectorDB(
         meta_fields=mdx_fields,
         instance_url=settings.WEAVIATE_URL,
-        index=settings.DOCS_INDEX,
+        index=settings.DOCS_VINDEX,
     )
     vect.update(mdx_recs_to_update)
 
@@ -181,7 +181,7 @@ def mdx_vect_remove(mdx_uuids_to_remove: List) -> None:
     vect = WeaviateVectorDB(
         meta_fields=mdx_fields,
         instance_url=settings.WEAVIATE_URL,
-        index=settings.DOCS_INDEX,
+        index=settings.DOCS_VINDEX,
     )
     vect.remove(mdx_uuids_to_remove)
 
