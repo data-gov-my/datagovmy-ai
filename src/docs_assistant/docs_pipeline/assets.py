@@ -75,21 +75,12 @@ def check_repo_changes(
 def check_github() -> Tuple:
     """Check git for modified mdx files"""
     last_check_time = datetime.now() - timedelta(days=1)  # Check for the past 1 day
-    added_files_main, modified_files_main, removed_files_main = check_repo_changes(
+    added_files, modified_files, removed_files = check_repo_changes(
         settings.GITHUB_REPO,
         settings.GITHUB_PATH,
         settings.GITHUB_TOKEN,
         last_check_time,
     )
-    added_files_local, modified_files_local, removed_files_local = check_repo_changes(
-        settings.GITHUB_REPO_LOCAL,
-        settings.GITHUB_PATH_LOCAL,
-        settings.GITHUB_TOKEN,
-        last_check_time,
-    )
-    added_files = added_files_main + added_files_local
-    modified_files = modified_files_main + modified_files_local
-    removed_files = removed_files_main + removed_files_local
     logger.info(
         f"Added files: {len(added_files)}, Modified files: {len(modified_files)}, Removed files: {len(removed_files)}"
     )
