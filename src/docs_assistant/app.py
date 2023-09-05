@@ -32,8 +32,8 @@ class EndpointFilter(logging.Filter):
 
 logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
 
-router = LangchainRouter(llm_cache_mode=LLMCacheMode.IN_MEMORY)
-# router = LangchainRouter()
+# router = LangchainRouter(llm_cache_mode=LLMCacheMode.IN_MEMORY)
+router = LangchainRouter()
 
 
 @router.post(
