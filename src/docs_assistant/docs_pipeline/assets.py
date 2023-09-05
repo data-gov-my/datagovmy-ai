@@ -36,7 +36,7 @@ def check_repo_changes(
     api_url = f"https://api.github.com/repos/{repo}/commits"
     headers = {"Authorization": f"token {token}"}
 
-    # Get the list of commits
+    # get the list of commits
     response = requests.get(api_url, headers=headers)
     response.raise_for_status()
 
@@ -48,21 +48,19 @@ def check_repo_changes(
 
     for commit in commits:
         commit_date = parse_github_date(commit["commit"]["committer"]["date"])
-        # If the commit was after the last check
+        # if the commit was after the last check
         if commit_date > last_check:
-            # Get the commit details
             commit_url = commit["url"]
             commit_response = requests.get(commit_url, headers=headers)
             commit_response.raise_for_status()
             commit_data = commit_response.json()
 
-            # Check each file in the commit
+            # check each file in the commit
             for file in commit_data["files"]:
-                # If the file is in the specified folder and is an .mdx file
                 if file["filename"].startswith(path_to_folder) and file[
                     "filename"
                 ].endswith(".mdx"):
-                    # Depending on the status of the file, add it to the appropriate list
+                    # depending on the status of the file, add it to the appropriate list
                     if file["status"] == "added":
                         added_files.append(file["filename"])
                     elif file["status"] == "modified":

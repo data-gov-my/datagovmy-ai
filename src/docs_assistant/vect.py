@@ -19,7 +19,7 @@ class BaseVectorDB(Protocol):
         """Initialize vectorstore for the first time"""
 
     def update(self, new_data: pd.DataFrame) -> List[int]:
-        """Update data"""
+        """Add or update records"""
 
     def remove(self, ids_to_remove: List) -> None:
         """Remove records from vectorstore"""
