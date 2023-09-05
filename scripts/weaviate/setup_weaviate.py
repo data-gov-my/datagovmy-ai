@@ -4,7 +4,11 @@ import argparse
 
 def restore_data(backup_id: str, url: str, class_name: str = None) -> None:
     client = weaviate.Client(url)
-
+    # remove index before restoring - restoring without deleting didn't seem to work
+    if class_name is not None:
+        client.schema.delete_class(class_name)
+    else:
+        client.schema.delete_all()
     result = client.backup.restore(
         backup_id=backup_id, backend="filesystem", include_classes=class_name
     )
