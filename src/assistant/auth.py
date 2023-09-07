@@ -1,10 +1,10 @@
 from cryptography.fernet import Fernet
 
 from config import *
+from utils.cache import cache
 
 from fastapi import Depends, status, HTTPException
 from fastapi.security.http import HTTPAuthorizationCredentials, HTTPBearer
-from fastapi_cache.decorator import cache
 from fastapi_cache import FastAPICache
 
 get_bearer_token = HTTPBearer(auto_error=False)
@@ -33,6 +33,8 @@ class APIKeyManager:
         await FastAPICache.clear(namespace="token")
 
     def get_key(self):
+        if settings.ENVIRONMENT == "dev":
+            return settings.MASTER_TOKEN_KEY
         try:
             with open(self.key_file_path, "r") as file:
                 api_key = file.read()

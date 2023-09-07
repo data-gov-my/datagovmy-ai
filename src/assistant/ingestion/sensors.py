@@ -6,7 +6,7 @@ from dagster import (
     JobSelector,
 )
 
-from utils import *
+from utils.helpers import *
 
 
 @run_failure_sensor

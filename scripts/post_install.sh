@@ -3,7 +3,7 @@ DATESTAMP="$(date +%FT%H:%m)"
 
 CD_INSTALL_TARGET=/home/ubuntu/datagovmy-ai
 DEPLOY_TEMP=/home/ubuntu/deploy-tmp
-DOCS_API_ROOT=${CD_INSTALL_TARGET}/src/docs_assistant
+DOCS_API_ROOT=${CD_INSTALL_TARGET}/src/assistant
 DOCS_API_ENV=${DOCS_API_ROOT}/.env
 WEAVIATE_ENV=${DOCS_API_ROOT}/scripts/weaviate/.env
 BIN_FILE=${DOCS_API_ROOT}/key.bin
@@ -15,9 +15,17 @@ cd $CD_INSTALL_TARGET
 # setup python environment if doesn't exist
 if [ ! -d "${CD_INSTALL_TARGET}/env" ]; then
     /home/ubuntu/.pyenv/shims/python -m venv $CD_INSTALL_TARGET/env
+    source env/bin/activate
+    python -m pip install pip-tools
+    make init
+else
+    source env/bin/activate
+    python -m pip install pip-tools
+    make update
 fi
-source env/bin/activate
-pip install -r requirements.txt
+
+# TODO: copy weaviate out
+# cp ${DOCS_API_ROOT}/scripts/weaviate
 
 # restore files if exists
 if [ -f ${DEPLOY_TEMP}/main.env.bak ]; then
