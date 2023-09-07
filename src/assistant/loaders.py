@@ -10,7 +10,7 @@ import pandas as pd
 from pathlib import Path
 from typing import Protocol, List
 
-from utils import *
+from utils.helpers import *
 from config import *
 
 
