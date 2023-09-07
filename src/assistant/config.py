@@ -2,6 +2,7 @@ from pydantic import BaseSettings, Field
 
 
 class Settings(BaseSettings):
+    ENVIRONMENT: str = Field(..., env="ENVIRONMENT")
     APP_ROOT_PATH: str = Field(..., env="APP_ROOT_PATH")
     OPENAI_API_KEY: str = Field(..., env="OPENAI_API_KEY")
     OPENAI_ORG_ID: str = Field(..., env="OPENAI_ORG_ID")
