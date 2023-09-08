@@ -1,17 +1,17 @@
 from enum import Enum
-from pydantic import BaseSettings, Field, validator, AnyHttpUrl, Union
-from typing import List
+from pydantic import BaseSettings, Field, validator
+from typing import List, Union
 
 
 class AppEnvironment(str, Enum):
     DEV = "dev"
     STAGING = "staging"
-    PRODUCTION = "production"
+    PRODUCTION = "prod"
 
 
 class Settings(BaseSettings):
     ENVIRONMENT: str = Field(AppEnvironment.DEV, env="ENVIRONMENT")
-    BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = Field(..., env="BACKEND_CORS_ORIGINS")
+    BACKEND_CORS_ORIGINS: List[str] = Field(..., env="BACKEND_CORS_ORIGINS")
     APP_ROOT_PATH: str = Field(..., env="APP_ROOT_PATH")
     MASTER_TOKEN_KEY: str = Field(..., env="MASTER_TOKEN_KEY")
 
@@ -39,9 +39,9 @@ class Settings(BaseSettings):
 
     @validator("ENVIRONMENT")
     def validate_environment(cls, value):
-        if value not in AppEnvironment:
+        if value not in [item.value for item in AppEnvironment]:
             raise ValueError(
-                f"Invalid environment. Must be one of: {', '.join(AppEnvironment.__members__)}"
+                f"Invalid environment. Must be one of: {', '.join([e.value for e in AppEnvironment])}"
             )
         return value
 

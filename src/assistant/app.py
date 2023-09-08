@@ -1,9 +1,6 @@
-#!/usr/bin/env python3
-import logging
 from fastapi import Depends, FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security.api_key import APIKey
-
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
 
@@ -13,6 +10,7 @@ from lanarky.responses import StreamingResponse
 from lanarky.routing import LangchainRouter, LLMCacheMode
 
 from dotenv import load_dotenv
+import logging
 
 from config import *
 from auth import APIKeyManager, get_token, get_master_token, key_manager
