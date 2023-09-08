@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# this script is run as root
 DATESTAMP="$(date +%FT%H:%m)"
 
 CD_INSTALL_TARGET=/home/ubuntu/datagovmy-ai
@@ -7,9 +8,6 @@ DOCS_API_ROOT=${CD_INSTALL_TARGET}/src/assistant
 DOCS_API_ENV=${DOCS_API_ROOT}/.env
 WEAVIATE_ENV=${DOCS_API_ROOT}/scripts/weaviate/.env
 BIN_FILE=${DOCS_API_ROOT}/key.bin
-
-# update permissions
-sudo chown -R ubuntu:ubuntu ${CD_INSTALL_TARGET}
 
 cd $CD_INSTALL_TARGET
 # setup python environment if doesn't exist
@@ -40,5 +38,13 @@ if [ -f ${DEPLOY_TEMP}/key.bin ]; then
     echo "[${DATESTAMP}] restoring key file"
     cp ${DEPLOY_TEMP}/key.bin ${BIN_FILE}
 fi
+
+# update permissions
+sudo chown -R ubuntu:ubuntu ${CD_INSTALL_TARGET}
+
+# install services
+echo "[${DATESTAMP}] installing services"
+ln -s ${DOCS_API_ROOT}/config/*.service /etc/systemd/system/
+systemctl daemon-reload
 
 echo "[${DATESTAMP}] post install step completed"

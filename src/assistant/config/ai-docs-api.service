@@ -1,0 +1,13 @@
+[Unit]
+Description=AI Docs API Service
+After=multi-user.target
+
+[Service]
+Type=simple
+Restart=always
+EnvironmentFile=/home/ubuntu/datagovmy-ai/src/assistant/.env
+WorkingDirectory=/home/ubuntu/datagovmy-ai/src/assistant
+ExecStart=/home/ubuntu/datagovmy-ai/env/bin/uvicorn app:app --host $BACKEND_HOST --port $BACKEND_PORT
+
+[Install]
+WantedBy=multi-user.target
