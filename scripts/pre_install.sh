@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
+# this script is run as user
 DATESTAMP="$(date +%FT%H:%m)"
+
 CD_INSTALL_TARGET=/home/ubuntu/datagovmy-ai
 DEPLOY_TEMP=/home/ubuntu/deploy-tmp
 DOCS_API_ROOT=${CD_INSTALL_TARGET}/src/assistant
@@ -21,6 +23,11 @@ if [ -f ${BIN_FILE} ]; then
     cp ${BIN_FILE} ${DEPLOY_TEMP}/key.bin
 fi
 
-# TODO: clean previous deployment
+# clear previous deployment if exists
+if [ -d ${CD_INSTALL_TARGET} ]; then
+    echo "[${DATESTAMP}] clearing previous deployment"
+    rm -rf ${CD_INSTALL_TARGET}
+    mkdir ${CD_INSTALL_TARGET}
+fi
 
 echo "[${DATESTAMP}] pre install step completed"

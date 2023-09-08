@@ -77,10 +77,9 @@ def get_health():
 app = FastAPI()
 app.include_router(router, tags=["chat"])
 
-origins = ["*"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=settings.BACKEND_CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
