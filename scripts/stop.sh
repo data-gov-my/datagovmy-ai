@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
 DATESTAMP="$(date +%FT%H:%m)"
 
-if [ -f "/etc/systemd/system/ai-api.service" ]
+if [ -f "/etc/systemd/system/ai-docs-api.service" ]
 then
-  sudo systemctl stop ai-api
+  sudo systemctl stop ai-docs-api
   sleep 1
-  while [ "$(sudo systemctl is-active ai-api)" == "active" ] 
+  while [ "$(sudo systemctl is-active ai-docs-api)" == "active" ]
   do
     sleep 1
   done
   echo "[${DATESTAMP}] application stopped"
 fi
 
-if [ -f "/etc/systemd/system/docs-ast-dagster.service" ]
+if [ -f "/etc/systemd/system/ai-docs-pipeline.service" ]
 then
-  sudo systemctl stop docs-ast-dagster
+  sudo systemctl stop ai-docs-pipeline
   sleep 1
-  while [ "$(sudo systemctl is-active docs-ast-dagster)" == "active" ] 
+  while [ "$(sudo systemctl is-active ai-docs-pipeline)" == "active" ]
   do
     sleep 1
   done
