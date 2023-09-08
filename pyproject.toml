@@ -19,4 +19,4 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "jupyter", "locust", "pre-commit"]
+dev = ["pytest", "jupyter", "locust", "pre-commit", "black"]
