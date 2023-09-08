@@ -13,14 +13,9 @@ cd $CD_INSTALL_TARGET
 # setup python environment if doesn't exist
 if [ ! -d "${CD_INSTALL_TARGET}/env" ]; then
     /home/ubuntu/.pyenv/shims/python -m venv $CD_INSTALL_TARGET/env
-    source env/bin/activate
-    python -m pip install pip-tools
-    make init
-else
-    source env/bin/activate
-    python -m pip install pip-tools
-    make update
 fi
+source env/bin/activate
+python -m pip install -r requirements/main.txt
 
 # TODO: copy weaviate out
 # cp ${DOCS_API_ROOT}/scripts/weaviate
