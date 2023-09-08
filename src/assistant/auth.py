@@ -45,7 +45,7 @@ class APIKeyManager:
 
 
 key_manager = APIKeyManager(
-    key_file_path=settings.KEY_FILE, encryption_key=settings.KEY
+    key_file_path=settings.KEY_FILE, encryption_key=settings.ENCRYPT_KEY
 )
 
 
