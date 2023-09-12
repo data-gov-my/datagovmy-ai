@@ -68,7 +68,7 @@ def create_chain(
 
     llm = ChatOpenAI(
         model="gpt-3.5-turbo",
-        max_tokens=1000,
+        max_tokens=2000,
         temperature=0,
         openai_api_key=settings.OPENAI_API_KEY,
         openai_organization=settings.OPENAI_ORG_ID,
@@ -93,7 +93,7 @@ def create_chain(
     )
     retrival_qa_chain_docs = RetrievalQAWithSourcesChain(
         combine_documents_chain=qa_chain_docs,
-        retriever=weaviate_docs.as_retriever(),
+        retriever=weaviate_docs.as_retriever(search_kwargs={"k": 5}),
         question_key="query",
     )
 
