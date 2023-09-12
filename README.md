@@ -2,7 +2,7 @@
 
 Backend repository and playground for datagovmy AI/ML services:
 - 👨‍💻 Open API Documentation Assistant ([See in action](https://developer.data.gov.my/))
-- 📈 MyDataGPT Assistant - Phase 1 - Dashboards Recommender ([See in action](https://data.gov.my/dashboards))
+- 📈 MyDataGPT Assistant - Phase 1 - Dashboards Recommender ([See in action](https://data.gov.my/dashboard))
 
 ## Setup Dev Workspace 🚀
 
