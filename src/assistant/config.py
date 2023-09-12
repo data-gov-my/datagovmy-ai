@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     ENCRYPT_KEY: str = Field(default=None, env="ENCRYPT_KEY")
     KEY_FILE: str = Field(default=None, env="KEY_FILE")
 
+    DASH_META_JSON: str = Field(default=None, env="DASH_META_JSON")
+    DASH_META_PARQUET: str = Field(default=None, env="DASH_META_PARQUET")
+
     class Config:
         env_file = ".env"
 
