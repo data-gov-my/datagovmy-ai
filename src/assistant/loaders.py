@@ -5,6 +5,7 @@ from langchain import FAISS
 from langchain.embeddings import OpenAIEmbeddings
 
 import uuid
+import json
 import base64
 import pandas as pd
 from pathlib import Path
@@ -145,6 +146,47 @@ class MdxLoader(BaseLoader):
         pass
 
 
+class DashboardMetaLoader(BaseLoader):
+    """Implementation of BaseLoader for Dashboard Metadata."""
+
+    def __init__(self, desc_json: str, desc_parquet: str):
+        self.desc_json = desc_json
+        self.desc_parquet = desc_parquet
+
+    def load(self):
+        """Load and process data from two sources:
+        - Dashboard i18n file for descriptions
+        - Dashboard meta parquet for agency and category
+
+        Returns:
+            dfm: DataFrame of processed text content and metadata with
+                 content_embed, uuid, metadata (header, source)
+        """
+        dfmeta_parquet = pd.read_parquet(self.desc_parquet)
+        dfmeta_parquet = dfmeta_parquet.rename(columns={"name": "id"})
+        # create the source column from routes
+        dfmeta_parquet["source"] = dfmeta_parquet["route"]
+        # create uuids for weaviate index
+        dfmeta_parquet["uuid"] = [str(uuid.uuid4()) for i in range(len(dfmeta_parquet))]
+
+        json_resp = requests.get(self.desc_json)
+        dash_json = json.loads(json_resp.text)
+        dfmeta_json = pd.DataFrame(dash_json["translation"]["dashboards"]).T
+        dfmeta_json.index = dfmeta_json.index.set_names("id")
+        dfmeta_json = dfmeta_json.reset_index()
+
+        # combine json and parquet dataframes
+        dfmeta = dfmeta_parquet.merge(dfmeta_json, on="id", suffixes=["_", ""])
+        dfmeta["content_embed"] = dfmeta[["name", "category", "description"]].apply(
+            lambda row: " ".join(row.values.astype(str)), axis=1
+        )
+
+        return dfmeta
+
+    def validate(self):
+        pass
+
+
 class MetaLoader(BaseLoader):
     """Implementation of BaseLoader for DC Metadata."""
 
@@ -154,6 +196,8 @@ class MetaLoader(BaseLoader):
 
     def load(self):
         """Load and process text data from file list.
+        [NOTE]: Currently not used
+
         Returns:
             dfm: DataFrame of processed text content and metadata
         """
