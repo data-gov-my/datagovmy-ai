@@ -11,14 +11,18 @@ import uuid
 import requests
 import pandas as pd
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from datetime import datetime, timedelta
 
 from config import *
-from loaders import MdxLoader
+from loaders import MdxLoader, DashboardMetaLoader
 from vect import WeaviateVectorDB
 
 DOCS_MDX_RECORD_PATH = Path(settings.APP_ROOT_PATH) / "data" / "docs_mdx_record.parquet"
+DASH_RECORD_PATH = Path(settings.APP_ROOT_PATH) / "data" / "dash_record.parquet"
+
+DOCS_MDX_FIELDS = ["header", "source"]
+DASH_META_FIELDS = ["name", "description", "category", "agency", "source"]
 
 logger = get_dagster_logger()
 
@@ -143,10 +147,12 @@ def handle_github_checking(check_github):
         unchanged_recs = df_docs_rec[~df_docs_rec.source.isin(changed_files)]
         df_docs_rec_new = pd.concat([unchanged_recs, df_to_update])
 
-        logger.info(f"Updating {DOCS_MDX_RECORD_PATH}")
-        df_docs_rec_new.to_parquet(DOCS_MDX_RECORD_PATH)
+        output_update = (
+            df_to_update,
+            df_docs_rec_new,
+        )
 
-        yield Output(df_to_update, output_name="mdx_recs_to_update")
+        yield Output(output_update, output_name="mdx_recs_to_update")
 
     if len(uuids_to_remove) > 0:
         logger.info(f"Records to remove: {len(uuids_to_remove)} records")
@@ -154,23 +160,29 @@ def handle_github_checking(check_github):
 
 
 @asset
-def mdx_vect_update(mdx_recs_to_update: pd.DataFrame) -> None:
+def mdx_vect_update(mdx_recs_to_update: Tuple) -> None:
     """Update mdx to vectorstore [Optional]"""
-    mdx_fields = ["header", "source"]
+    (
+        recs_to_update,
+        df_docs_rec_new,
+    ) = mdx_recs_to_update
     vect = WeaviateVectorDB(
-        meta_fields=mdx_fields,
+        meta_fields=DOCS_MDX_FIELDS,
         instance_url=settings.WEAVIATE_URL,
         index=settings.DOCS_VINDEX,
     )
-    vect.update(mdx_recs_to_update)
+    vect.update(recs_to_update)
+
+    # reconstruct records from unchanged and changed files
+    logger.info(f"Updating {DOCS_MDX_RECORD_PATH}")
+    df_docs_rec_new.to_parquet(DOCS_MDX_RECORD_PATH)
 
 
 @asset
 def mdx_vect_remove(mdx_uuids_to_remove: List) -> None:
     """Remove mdx from vectorstore [Optional]"""
-    mdx_fields = ["header", "source"]
     vect = WeaviateVectorDB(
-        meta_fields=mdx_fields,
+        meta_fields=DOCS_MDX_FIELDS,
         instance_url=settings.WEAVIATE_URL,
         index=settings.DOCS_VINDEX,
     )
@@ -183,8 +195,113 @@ def mdx_vect_remove(mdx_uuids_to_remove: List) -> None:
     df_docs_rec.to_parquet(DOCS_MDX_RECORD_PATH)
 
 
-# @asset
-# def load_dc_meta() -> pd.DataFrame:
-#     """Check DC Metadata from S3"""
-#     # placeholder
-#     return pd.DataFrame()
+@asset
+def vect_update(
+    dash_vects_to_update: Optional[Tuple] = None,
+    # mdx_recs_to_update: Optional[Tuple] = None,
+) -> None:
+    """Update new records to vectorstore [Optional]"""
+    if dash_vects_to_update is not None:
+        (
+            recs_to_update,
+            df_docs_rec_new,
+        ) = dash_vects_to_update
+        vect = WeaviateVectorDB(
+            meta_fields=DASH_META_FIELDS,
+            instance_url=settings.WEAVIATE_URL,
+            index=settings.DC_META_VINDEX,
+        )
+        vect.update(recs_to_update)
+
+        # reconstruct records from unchanged and changed files
+        logger.info(f"Updating {DASH_RECORD_PATH}")
+        df_docs_rec_new.to_parquet(DASH_RECORD_PATH)
+
+    # if mdx_recs_to_update is not None:
+    #     (
+    #         recs_to_update,
+    #         df_docs_rec_new,
+    #     ) = mdx_recs_to_update
+    #     vect = WeaviateVectorDB(
+    #         meta_fields=DOCS_MDX_FIELDS,
+    #         instance_url=settings.WEAVIATE_URL,
+    #         index=settings.DOCS_VINDEX,
+    #     )
+    #     vect.update(recs_to_update)
+
+    #     # reconstruct records from unchanged and changed files
+    #     logger.info(f"Updating {DOCS_MDX_RECORD_PATH}")
+    #     df_docs_rec_new.to_parquet(DOCS_MDX_RECORD_PATH)
+
+
+@asset
+def vect_remove(
+    dash_vects_to_remove: Optional[Tuple] = None,
+    # mdx_uuids_to_remove: List = []
+) -> None:
+    """Remove new records from vectorstore [Optional]"""
+    if dash_vects_to_remove is not None:
+        vect = WeaviateVectorDB(
+            meta_fields=DASH_META_FIELDS,
+            instance_url=settings.WEAVIATE_URL,
+            index=settings.DC_META_VINDEX,
+        )
+        vect.remove(dash_vects_to_remove)
+
+        # update records parquet file
+        df_docs_rec = pd.read_parquet(DASH_RECORD_PATH)
+        df_docs_rec = df_docs_rec[~df_docs_rec.uuid.isin(dash_vects_to_remove)]
+        logger.info(f"Updating {DASH_RECORD_PATH}")
+        df_docs_rec.to_parquet(DASH_RECORD_PATH)
+
+    # if len(mdx_uuids_to_remove) > 0:
+    #     vect = WeaviateVectorDB(
+    #         meta_fields=DOCS_MDX_FIELDS,
+    #         instance_url=settings.WEAVIATE_URL,
+    #         index=settings.DOCS_VINDEX,
+    #     )
+    #     vect.remove(mdx_uuids_to_remove)
+
+    #     # update records parquet file
+    #     df_docs_rec = pd.read_parquet(DOCS_MDX_RECORD_PATH)
+    #     df_docs_rec = df_docs_rec[~df_docs_rec.uuid.isin(mdx_uuids_to_remove)]
+    #     logger.info(f"Updating {DOCS_MDX_RECORD_PATH}")
+    #     df_docs_rec.to_parquet(DOCS_MDX_RECORD_PATH)
+
+
+@multi_asset(
+    outs={
+        "dash_vects_to_update": AssetOut(is_required=False),
+        "dash_vects_to_remove": AssetOut(is_required=False),
+    }
+)
+def check_dash_metadata() -> None:
+    """Check Dashboards Metadata from S3"""
+    print(settings.DASH_META_PARQUET)
+    dash_loader = DashboardMetaLoader(
+        settings.DASH_META_JSON, settings.DASH_META_PARQUET
+    )
+    all_dash_meta = dash_loader.load()
+
+    df_dash_rec = pd.read_parquet(DASH_RECORD_PATH)
+    dfmeta_to_add = all_dash_meta[~all_dash_meta.id.isin(df_dash_rec.id)]
+    dfmeta_to_remove = df_dash_rec[~df_dash_rec.id.isin(all_dash_meta.id)]
+    # TODO: support changed metadata
+
+    logger.info(
+        f"Added meta: {len(dfmeta_to_add)}, Removed meta: {len(dfmeta_to_remove)}"
+    )
+
+    if len(dfmeta_to_add) > 0:
+        logger.info(f"Records to add: {len(dfmeta_to_add)} records")
+        df_dash_rec_new = pd.concat([df_dash_rec, dfmeta_to_add])
+        output_update = (
+            dfmeta_to_add,
+            df_dash_rec_new,
+        )
+        yield Output(output_update, output_name="dash_vects_to_update")
+
+    uuids_to_remove = dfmeta_to_remove.uuid.tolist()
+    if len(uuids_to_remove) > 0:
+        logger.info(f"Records to remove: {len(uuids_to_remove)} records")
+        yield Output(uuids_to_remove, output_name="dash_vects_to_remove")
