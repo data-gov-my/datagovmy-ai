@@ -6,7 +6,7 @@ The following code is an example of how to make an API query in python to retrie
 import requests
 import pprint
 
-url = "https://api.data.gov.my/data-catalogue?id=elections_federal_ge00_ballots_0&limit=3"
+url = "https://api.data.gov.my/data-catalogue?id=fuelprice&limit=3"
 
 response_json = requests.get(url=url).json()
 pprint.pprint(response_json)
@@ -22,7 +22,7 @@ var requestOptions = {
   redirect: "follow",
 };
 
-fetch("https://api.data.gov.my/data-catalogue?id=elections_federal_ge00_ballots_0&limit=3", requestOptions)
+fetch("https://api.data.gov.my/data-catalogue?id=fuelprice&limit=3", requestOptions)
   .then((response) => response.json())
   .then((result) => console.log(result))
   .catch((error) => console.log("error", error));
@@ -38,7 +38,7 @@ import Foundation
 import FoundationNetworking
 #endif
 
-var request = URLRequest(url: URL(string: "https://api.data.gov.my/data-catalogue?id=elections_federal_ge00_ballots_0&limit=3")!,timeoutInterval: Double.infinity)
+var request = URLRequest(url: URL(string: "https://api.data.gov.my/data-catalogue?id=fuelprice&limit=3")!,timeoutInterval: Double.infinity)
 request.httpMethod = "GET"
 
 let task = URLSession.shared.dataTask(with: request) { data, response, error in
@@ -61,7 +61,7 @@ The following code is an example of how to make an API query in Dart to retrieve
 import 'package:http/http.dart' as http;
 
 void main() async {
-  var request = http.Request('GET', Uri.parse('https://api.data.gov.my/data-catalogue?id=elections_federal_ge00_ballots_0&limit=3'));
+  var request = http.Request('GET', Uri.parse('https://api.data.gov.my/data-catalogue?id=fuelprice&limit=3'));
 
   request.followRedirects = false;
 
@@ -93,7 +93,7 @@ import java.util.concurrent.TimeUnit
 
 val client = OkHttpClient()
 val request = Request.Builder()
-  .url("https://api.data.gov.my/data-catalogue?id=elections_federal_ge00_ballots_0&limit=3")
+  .url("https://api.data.gov.my/data-catalogue?id=fuelprice&limit=3")
   .build()
 val response = client.newCall(request).execute()
 
@@ -115,7 +115,7 @@ public class Main {
     MediaType mediaType = MediaType.parse("text/plain");
     RequestBody body = RequestBody.create(mediaType, "");
     Request request = new Request.Builder()
-      .url("https://api.data.gov.my/data-catalogue?id=elections_federal_ge00_ballots_0&limit=3")
+      .url("https://api.data.gov.my/data-catalogue?id=fuelprice&limit=3")
       .method("GET", body)
       .build();
     Response response = client.newCall(request).execute();
