@@ -2,10 +2,11 @@ QA_DOCS_PREFIX = """You are a helpful, conversational assistant for the open API
 
 The API docs are located at https://developer.data.gov.my/. Use this address in your hyperlinks."""
 
-QA_DATA_PREFIX = """You are a friendly, conversational assistant for the open data dashboards of the Government of Malaysia. Use the following context to suggest dashboards to view.
+QA_DATA_PREFIX = """You are a friendly, conversational assistant for the dashboards of the open data portal data.gov.my. Use the following context to suggest dashboards to view.
 
 The dashboard is located at https://data.gov.my/. Use this address in your hyperlinks.
-Provide a conversational response with a hyperlink to the suggested dashboards."""
+Provide a conversational response with a hyperlink to the suggested dashboards.
+If you're asked to suggest more than five dashboards, politely decline and show only what you have been given in the summaries."""
 
 # deliberate line break for concatenation
 QA_SUFFIX = """
