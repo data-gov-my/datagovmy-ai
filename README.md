@@ -1,8 +1,8 @@
 # datagovmy-ai
 
-Backend repository and playground for datagovmy AI/ML services:
+Backend repository and playground for experimental datagovmy AI/ML services:
 - 👨‍💻 Open API Documentation Assistant ([See in action](https://developer.data.gov.my/))
-- 📈 MyDataGPT Assistant - Phase 1 - Dashboards Recommender ([See in action](https://data.gov.my/dashboard))
+- 📈 MyDataGPT Assistant (Coming Soon)
 
 ## Setup Dev Workspace 🚀
 
@@ -29,11 +29,9 @@ Click on the link of the respective projects to find out how to set them up for 
 
 Built to assist developers in getting started with using the data.gov.my open API. The docs assistant is a Retrieval Augmented Generation (RAG) application powered by OpenAI's `gpt-3.5-turbo` model. Its data pipeline indexes `.mdx` files from the [API documentation](https://developer.data.gov.my/) in the [datagovmy-front](https://github.com/data-gov-my/datagovmy-front) repository and stores embeddings in a Weaviate vectorstore for retrieval.
 
-### MyDataGPT Assistant 📈
+### MyDataGPT Assistant (Coming Soon!) 📈
 
-This assistant is part of a bigger effort to build a one-stop data assistant for the nation's open data designed to eventually answer data queries and show insights on all data released on data.gov.my. As of the September 2023 data.gov.my launch, it is a dashboards recommender that assists exploration of the [many dashboards available](https://data.gov.my/dashboard) on the open data portal.
-
-Similar to the docs assistant, it is also an RAG application that leverages a Weaviate vector index loaded with dashboard metadata.
+This assistant is part of a bigger effort to build a one-stop data assistant for the nation's open data designed to eventually answer data queries and show insights on all data released on data.gov.my. Similar to the docs assistant, it is also an RAG application that leverages a Weaviate vector index loaded with metadata. This is currently under development. Stay tuned!
 
 ### Known limitations:
 - Bahasa Malaysia (BM) language support - in our testing with BM queries, GPT-3.5 tends to lean towards responses that sound more like Bahasa Indonesia despite our best efforts in prompting. YMMV, but more work to be done here!
@@ -45,4 +43,10 @@ This is an experimental product that utilizes the OpenAI API. It is provided for
 
 ## Contributing
 
-If you find any issues or have any feedback to enhance the project, please submit an issue. We are open to pull requests as well!
+Thank you for your willingness to contribute to this free and open source project by the Malaysian public sector! When contributing, consider first discussing your desired change with the core team via GitHub issues or discussions!
+
+## License
+
+data.gov.my is licensed under [MIT](./LICENSE.md)
+
+Copyright © 2023 Government of Malaysia
