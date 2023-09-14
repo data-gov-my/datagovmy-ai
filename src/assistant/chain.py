@@ -33,13 +33,13 @@ class DocsRetriever(BaseRetriever, BaseModel):
         else:
             return doc.page_content
 
-    # def get_relevant_documents(self, query):
-    #     docs = []
-    #     for doc in self.vectorstore.similarity_search(query):
-    #         content = self.get_page_content(doc)
-    #         docs.append(Document(page_content=content, metadata=doc.metadata))
+    def get_relevant_documents(self, query):
+        docs = []
+        for doc in self.vectorstore.similarity_search(query):
+            content = self.get_page_content(doc)
+            docs.append(Document(page_content=content, metadata=doc.metadata))
 
-    #     return docs
+        return docs
 
     async def _aget_relevant_documents(self, query) -> List[Document]:
         docs_similar = await self.vectorstore.amax_marginal_relevance_search(query, k=5)
