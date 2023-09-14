@@ -6,7 +6,11 @@ on:
 jobs:
   continuous-deployment:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: |
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      github.event.pull_request.merged == true &&
+      contains(github.event.pull_request.labels.*.name, 'deploy')
     steps:
       # Step 1
       - name: Configure AWS credentials

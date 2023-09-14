@@ -35,7 +35,7 @@ This assistant is part of a bigger effort to build a one-stop data assistant for
 
 ### Known limitations:
 - Bahasa Malaysia (BM) language support - in our testing with BM queries, GPT-3.5 tends to lean towards responses that sound more like Bahasa Indonesia despite our best efforts in prompting. YMMV, but more work to be done here!
-- Full understanding of the Data Catalogue API fields (coming soon)
+- ~~Full understanding of the Data Catalogue API fields (coming soon)~~
 
 ## Usage
 
