@@ -1,4 +1,7 @@
 import json
+from typing import Any, Coroutine, Dict, List, Optional
+from langchain.callbacks.manager import Callbacks
+from langchain.schema.document import Document
 import weaviate
 from langchain.chains import RetrievalQAWithSourcesChain
 from langchain.schema import BaseRetriever
@@ -30,12 +33,20 @@ class DocsRetriever(BaseRetriever, BaseModel):
         else:
             return doc.page_content
 
-    def get_relevant_documents(self, query):
+    # def get_relevant_documents(self, query):
+    #     docs = []
+    #     for doc in self.vectorstore.similarity_search(query):
+    #         content = self.get_page_content(doc)
+    #         docs.append(Document(page_content=content, metadata=doc.metadata))
+
+    #     return docs
+
+    async def _aget_relevant_documents(self, query) -> List[Document]:
+        docs_similar = await self.vectorstore.amax_marginal_relevance_search(query, k=5)
         docs = []
-        for doc in self.vectorstore.similarity_search(query):
+        for doc in docs_similar:
             content = self.get_page_content(doc)
             docs.append(Document(page_content=content, metadata=doc.metadata))
-
         return docs
 
 
@@ -121,12 +132,15 @@ def create_chain(
         by_text=False,  # force vector search
     )
 
+    custom_docs_retriever = DocsRetriever(vectorstore=weaviate_docs)
+
     qa_chain_docs = load_qa_with_sources_chain(
         llm=llm, chain_type="stuff", prompt=chat_prompt, memory=memory, verbose=True
     )
     retrival_qa_chain_docs = RetrievalQAWithSourcesChain(
         combine_documents_chain=qa_chain_docs,
-        retriever=weaviate_docs.as_retriever(search_kwargs={"k": 5}),
+        # retriever=weaviate_docs.as_retriever(search_kwargs={"k": 5}),
+        retriever=custom_docs_retriever,
         question_key="query",
     )
 
