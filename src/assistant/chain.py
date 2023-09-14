@@ -1,9 +1,42 @@
+import json
 import weaviate
 from langchain.chains import RetrievalQAWithSourcesChain
+from langchain.schema import BaseRetriever
+from langchain.docstore.document import Document
+from langchain.vectorstores import VectorStore
 
 from prompts import *
 from schema import *
 from config import *
+from utils.templates import CATALOGUE_ID_TEMPLATE
+
+
+class DocsRetriever(BaseRetriever, BaseModel):
+    vectorstore: VectorStore
+
+    class Config:
+        arbitrary_types_allowed = True
+
+    def get_page_content(self, doc) -> str:
+        """Create page_content to embed into context"""
+        metadata = doc.metadata
+        # if dc_meta source, inject catalogue name and id into open API guide
+        if "dc_meta" in doc.metadata["source"]:
+            dc_meta = json.loads(metadata["header"])
+            page_content = CATALOGUE_ID_TEMPLATE.format(
+                catalog_name=doc.page_content, id_name=dc_meta["id"]
+            )
+            return page_content
+        else:
+            return doc.page_content
+
+    def get_relevant_documents(self, query):
+        docs = []
+        for doc in self.vectorstore.similarity_search(query):
+            content = self.get_page_content(doc)
+            docs.append(Document(page_content=content, metadata=doc.metadata))
+
+        return docs
 
 
 def create_chain(
