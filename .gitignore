@@ -47,3 +47,4 @@ Desktop.ini
 *.swp
 *~
 .ipynb_checkpoints
+data/*record.parquet
