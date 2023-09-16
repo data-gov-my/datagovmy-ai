@@ -55,6 +55,10 @@ class WeaviateVectorDB(BaseVectorDB):
 
     def remove(self, ids_to_remove: List) -> None:
         for uuid_remove in ids_to_remove:
-            self.client.data_object.delete(
-                uuid=uuid_remove,
-            )
+            try:
+                self.client.data_object.delete(
+                    uuid=uuid_remove,
+                )
+            except Exception as e:
+                print(e)
+                continue
