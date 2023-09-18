@@ -27,7 +27,14 @@ class DocsRetriever(BaseRetriever, BaseModel):
         if "dc_meta" in doc.metadata["source"]:
             dc_meta = json.loads(metadata["header"])
             page_content = CATALOGUE_ID_TEMPLATE.format(
-                catalog_name=doc.page_content, id_name=dc_meta["id"]
+                subcategory=dc_meta["subcategory"],
+                category=dc_meta["category"],
+                id=dc_meta["id"],
+                description=dc_meta["description"],
+                data_methodology=dc_meta["data_methodology"],
+                update_frequency=dc_meta["update_frequency"],
+                data_sources=dc_meta["data_sources"],
+                data_caveat=dc_meta["data_caveat"],
             )
             return page_content
         else:
