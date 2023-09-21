@@ -25,33 +25,6 @@ class BaseLoader(Protocol):
         """Validate data (needed?)"""
 
 
-def read_file_from_repo(repo: str, file_path: str, token: str):
-    """Read file from GitHub repo.
-
-    Args:
-        repo (str): GitHub repo name
-        file_path (str): path to file in repo
-        token (str): GitHub token
-
-    Returns:
-        str: file content
-    """
-
-    api_url = f"https://api.github.com/repos/{repo}/contents/{file_path}"
-    headers = {"Authorization": f"token {token}"}
-
-    # Send the request
-    response = requests.get(api_url, headers=headers)
-    response.raise_for_status()
-
-    file_data = response.json()
-
-    # Decode the file content from Base64
-    content = base64.b64decode(file_data["content"]).decode("utf-8")
-
-    return content
-
-
 class MdxLoader(BaseLoader):
     """Implementation of BaseLoader for MDX files."""
 
@@ -93,52 +66,59 @@ class MdxLoader(BaseLoader):
                 md_header_splits[i].metadata.update({"source": relative_path})
             all_splitted_text += md_header_splits
 
-        # post process splitted text
+        # split data for dataframe
         df_data = []
         for doc in all_splitted_text:
-            print(doc.page_content)
             if "header" in doc.metadata:
-                print("Header:", doc.metadata["header"])
+                pass
             else:
                 # handle H1 headers here
                 header = extract_line_without_hash(doc.page_content)
                 if header:
                     doc.metadata.update({"header": header})
-                    print("New Header:", doc.metadata["header"])
-            print("Source:", doc.metadata["source"])
-            print()
-            print()
-            df_data.append((doc.page_content, doc.metadata))
+            df_data.append((doc.page_content, doc.metadata, doc))
 
-        dfm = pd.DataFrame(df_data, columns=["page_content", "metadata"])
+        dfm = pd.DataFrame(df_data, columns=["page_content", "metadata", "doc_object"])
 
         # expand metadata dict to columns
         dfm = pd.concat(
             [dfm.drop("metadata", axis=1), dfm.metadata.apply(pd.Series)], axis=1
         )
+        dfm = dfm.rename(columns={"Header": "header"})
 
-        # drop specific headers and sources
+        # exclude headers and sources
         to_exclude_headers = [
             "Using the AI Helper",
             "Frequently Asked Questions",  # function def for FAQbox
         ]
         to_exclude_source = ["ai-helper.en.mdx"]
+        to_exclude_header_source = [
+            ("Example Request", "static-api/opendosm.en.mdx"),
+            ("Request Query & Response Format", "static-api/opendosm.en.mdx"),
+        ]
 
         dfm = dfm[~dfm.header.isin(to_exclude_headers)]
         dfm = dfm[~dfm.source.isin(to_exclude_source)]
+        dfm = dfm[
+            dfm.apply(
+                lambda row: (row["header"], row["source"])
+                not in to_exclude_header_source,
+                axis=1,
+            )
+        ]
 
-        # remove `.en.mdx` from mdx filenames
+        # strip .en.mdx from filename
         dfm.source = dfm.source.str[:-7]
-        # create unique readable id - combo of header and source
+        # create unique id - combo of header and source
+        # when new list of mdx files are parsed, create similar id and join with this dataframe
         dfm["id"] = dfm.header + " " + dfm.source
-        # weaviate needs uuid as id
+        # however, weaviate needs uuid as id
         dfm["uuid"] = [str(uuid.uuid4()) for i in range(len(dfm))]
 
         # content to embed is combo of header and page_content
         dfm["content_embed"] = dfm.apply(
             lambda row: row.header + " " + row.page_content, axis=1
         ).apply(clean_content)
-
         return dfm
 
     def validate(self):
@@ -187,24 +167,24 @@ class DashboardMetaLoader(BaseLoader):
         pass
 
 
-class MetaLoader(BaseLoader):
-    """Implementation of BaseLoader for DC Metadata."""
+class DCMetaLoader(BaseLoader):
+    """Implementation of BaseLoader for Data Catalogue Metadata."""
 
-    def __init__(self, sources: List[str], additional_param):
+    def __init__(self, sources: List[str]):
         self.sources = sources
-        self.additional_param = additional_param
 
     def load(self):
-        """Load and process text data from file list.
-        [NOTE]: Currently not used
+        """Load and process text data from metadata parquet file.
 
         Returns:
             dfm: DataFrame of processed text content and metadata
         """
         meta_file = self.sources[0]
-        dfmeta = pd.read_csv(meta_file)
-        dfmeta["grouping_col"] = dfmeta.apply(
-            lambda row: "_".join([row.bucket, row.file_name]), axis=1
+        dfmeta = pd.read_parquet(meta_file)
+        dfmeta = dfmeta[dfmeta.exclude_openapi == 0]  # index only openAPI DCs
+        dfmeta["dc_page_id"] = dfmeta.apply(
+            lambda row: "_".join([row["bucket"], row["file_name"], str(row["id"])]),
+            axis=1,
         )
 
         # drop bm translation columns
@@ -213,42 +193,47 @@ class MetaLoader(BaseLoader):
         ]
         dfmeta.drop(columns_to_drop, axis=1, inplace=True)
 
-        # combine column descriptions into desc string
-        grouped = dfmeta.groupby("grouping_col")
-        group_desc_text = []
-        group_desc_text_clean = []
-        for group_name, group_indices in grouped.groups.items():
-            print("Group:", group_name)
-            group_df = dfmeta.loc[group_indices]
-            # create richer dataset description based on title and desc
-            group_str = "\n".join(
-                group_df[group_df.id < 0].apply(
-                    lambda row: row.title_en.strip() + " " + row.desc_en.strip(), axis=1
-                )
-            )
-            group_str_clean = " ".join(
-                group_df[group_df.id < 0].apply(
-                    lambda row: row.title_en.strip() + " " + row.desc_en.strip(), axis=1
-                )
-            )
-            print(group_str.strip())
-            group_desc_text.append(group_str.strip())
-            group_desc_text_clean.append(group_str_clean.strip())
+        # parse column desc to extract datatype and descriptions
+        dfmeta[["col_data_type", "col_description"]] = dfmeta.desc_en.apply(
+            parse_desc
+        ).apply(pd.Series)
 
-        # grouped dataset meta
-        dfmeta_set = dfmeta[dfmeta.id >= 0].copy()
-        dfmeta_set["id_openapi"] = dfmeta_set.grouping_col.str.cat(
-            "_" + dfmeta_set.id.astype(str)
+        # group column metadata in different formats
+        dfmeta_byfile = dfmeta[dfmeta.id > 0].groupby("file_name").first()
+        dfmeta_byfile["col_meta"] = dfmeta.groupby("file_name").apply(
+            lambda group_df: "\n".join(
+                group_df[group_df.id > 0].apply(
+                    lambda row: row.title_en.strip() + " " + row.desc_en.strip(), axis=1
+                )
+            )
         )
-        dfmeta_set["col_meta"] = group_desc_text
-        dfmeta_set["col_meta_clean"] = group_desc_text_clean
+        dfmeta_byfile["col_meta_clean"] = dfmeta.groupby("file_name").apply(
+            lambda group_df: " ".join(
+                group_df[group_df.id > 0].apply(
+                    lambda row: row.title_en.strip() + " " + row.desc_en.strip(), axis=1
+                )
+            )
+        )
+        dfmeta_byfile["col_meta_dict"] = dfmeta.groupby("file_name").apply(
+            lambda group_df: group_df[group_df.id > 0][
+                ["name", "col_data_type", "col_description"]
+            ].to_dict(orient="records")
+        )
+
+        # convert columns to numeric
+        dfmeta_numcols = [
+            "catalog_data.catalog_filters.start",
+            "catalog_data.catalog_filters.end",
+        ]
+        for numcol in dfmeta_numcols:
+            dfmeta_byfile[numcol] = pd.to_numeric(dfmeta_byfile[numcol])
 
         # convert start end to date range eg. 1955-2023
-        dfmeta_set["date_range_int"] = (
-            dfmeta_set["catalog_data.catalog_filters.end"]
-            - dfmeta_set["catalog_data.catalog_filters.start"]
+        dfmeta_byfile["date_range_int"] = (
+            dfmeta_byfile["catalog_data.catalog_filters.end"]
+            - dfmeta_byfile["catalog_data.catalog_filters.start"]
         )
-        dfmeta_set["date_range"] = dfmeta_set.apply(
+        dfmeta_byfile["date_range"] = dfmeta_byfile.apply(
             lambda row: str(int(row["catalog_data.catalog_filters.start"]))
             if row.date_range_int == 0
             else str(int(row["catalog_data.catalog_filters.start"]))
@@ -257,60 +242,89 @@ class MetaLoader(BaseLoader):
             axis=1,
         )
 
-        dfmeta["data_sources"] = dfmeta[
+        dfmeta_byfile["catalog_data.catalog_filters.frequency"] = dfmeta_byfile[
+            "catalog_data.catalog_filters.frequency"
+        ].str.lower()
+
+        dfmeta_byfile["data_sources"] = dfmeta_byfile[
             "catalog_data.catalog_filters.data_source"
         ].apply(parse_list_string)
+        dfmeta_byfile.reset_index(inplace=True)
 
-        # remove from meta
         to_drop = [
-            "catalog_data.catalog_filters.geographic",
-            "catalog_data.catalog_filters.demographic",
+            "category",  # machine name, we only need descriptive english
+            "subcategory",  # machine name, we only need descriptive english
+            "catalog_data.catalog_filters.start",
+            "catalog_data.catalog_filters.end",
+            "catalog_data.catalog_filters.geography",
+            "catalog_data.catalog_filters.demography",
+            "catalog_data.catalog_filters.data_source",
             "catalog_data.chart.chart_filters.SLICE_BY",
             "catalog_data.chart.chart_filters.precision",
             "catalog_data.chart.chart_variables.parents",
-            "catalog_data.chart.chart_variables.exclude",
-            "catalog_data.chart.chart_variables.freeze",
-            "catalog_data.catalog_filters.start",
-            "catalog_data.catalog_filters.end",
-            "catalog_data.catalog_filters.data_source",
             "catalog_data.metadata_lang.en.publication",
             "date_range_int",
             "id",
-            "file_name",
-            "name",
+            "name",  # machine name, we only need descriptive english - subcategory
+            "col_data_type",
+            "col_description",
+            "exclude_openapi",
+            "bucket",
+            "title_en",  # for columns meta
+            "desc_en",  # for columns meta
         ]
 
-        dfmeta_set = dfmeta_set.drop(to_drop, axis=1)
+        dfmeta_byfile = dfmeta_byfile.drop(to_drop, axis=1)
 
         to_rename = {
             "catalog_data.catalog_filters.frequency": "update_frequency",
-            "catalog_data.metadata_neutral.data_as_of": "data_as_of",
-            "catalog_data.metadata_neutral.last_updated": "data_last_updated",
-            "catalog_data.metadata_neutral.next_update": "data_next_update",
             "catalog_data.metadata_lang.en.methodology": "data_methodology",
             "catalog_data.metadata_lang.en.caveat": "data_caveat",
-            "catalog_data.metadata_lang.en.publication": "publications",
             "catalog_data.chart.chart_type": "chart_type",
-            "bucket": "dataset_category",
-            "title_en": "title",
-            "desc_en": "description",
+            "category_en": "category",
+            "subcategory_en": "subcategory",
+            "description.en": "description",
+            "file_name": "id",
         }
-        dfmeta_set = dfmeta_set.rename(to_rename, axis=1)
+        dfmeta_byfile = dfmeta_byfile.rename(to_rename, axis=1)
 
-        # format metadata for each row for embeddings
+        # generate uuid for weaviate db
+        dfmeta_byfile["uuid"] = [str(uuid.uuid4()) for i in range(len(dfmeta_byfile))]
+
+        # format metadata for embeddings
         cols_to_concat = [
-            "dataset_category",
-            "title",
+            "subcategory",
+            "category",
             "description",
-            "chart_type",
             "data_sources",
             "col_meta_clean",
         ]
-        dfmeta_set["content_embed"] = dfmeta_set[cols_to_concat].apply(
+        dfmeta_byfile["content_embed"] = dfmeta_byfile[cols_to_concat].apply(
             lambda row: " ".join(row.values.astype(str)), axis=1
         )
 
-        return dfmeta_set
+        # format metadata into header for retriever
+        metacols_for_header = [
+            "id",
+            "subcategory",
+            "category",
+            "description",
+            "data_methodology",
+            "update_frequency",
+            "data_sources",
+            "data_caveat",
+            "dc_page_id",
+        ]
+        dfmeta_byfile["header"] = dfmeta_byfile[metacols_for_header].to_dict(
+            orient="records"
+        )
+        dfmeta_byfile["header"] = dfmeta_byfile.apply(
+            lambda row: json.dumps(row.header), axis=1
+        )
+
+        # use this to identify dc_meta in retriever
+        dfmeta_byfile["source"] = "dc_meta"
+        return dfmeta_byfile
 
     def validate(self):
         # Implement the validation logic for MetaLoader
