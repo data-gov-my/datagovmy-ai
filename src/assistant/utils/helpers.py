@@ -36,12 +36,23 @@ def clean_content(text: str) -> str:
 
 
 def parse_list_string(string: str) -> Optional[str]:
-    """Parse data source string into comma seperated string"""
+    """Parse DC meta data source string into comma seperated string"""
     try:
         parsed_list = ast.literal_eval(string)  # Evaluate the string as a literal
         return ",".join(parsed_list)
     except (SyntaxError, ValueError):
         return None  # Return None if parsing fails
+
+
+def parse_desc(sample):
+    """Parse DC meta description column into data_type and desc"""
+    match = re.match(r"\[(\w+)\]\s*(.+)", sample)
+    if match:
+        data_type = match.group(1)
+        text = match.group(2)
+        return data_type, text
+    else:
+        return None, None
 
 
 # Others
@@ -61,3 +72,30 @@ def send_telegram(message: str) -> None:
         }
         tf_url = f"https://api.telegram.org/bot{settings.TELEGRAM_TOKEN}/sendMessage"
         r = requests.get(url=tf_url, data=params)
+
+
+def read_file_from_repo(repo: str, file_path: str, token: str):
+    """Read file from GitHub repo.
+
+    Args:
+        repo (str): GitHub repo name
+        file_path (str): path to file in repo
+        token (str): GitHub token
+
+    Returns:
+        str: file content
+    """
+
+    api_url = f"https://api.github.com/repos/{repo}/contents/{file_path}"
+    headers = {"Authorization": f"token {token}"}
+
+    # Send the request
+    response = requests.get(api_url, headers=headers)
+    response.raise_for_status()
+
+    file_data = response.json()
+
+    # Decode the file content from Base64
+    content = base64.b64decode(file_data["content"]).decode("utf-8")
+
+    return content
