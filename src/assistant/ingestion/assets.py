@@ -15,11 +15,17 @@ from typing import List, Tuple, Optional
 from datetime import datetime, timedelta
 
 from config import *
-from loaders import MdxLoader, DashboardMetaLoader
+from loaders import MdxLoader, DashboardMetaLoader, DCMetaLoader
 from vect import WeaviateVectorDB
 
 DOCS_MDX_RECORD_PATH = Path(settings.APP_ROOT_PATH) / "data" / "docs_mdx_record.parquet"
+LOCAL_MDX_RECORD_PATH = (
+    Path(settings.APP_ROOT_PATH) / "data" / "local_mdx_record.parquet"
+)
 DASH_RECORD_PATH = Path(settings.APP_ROOT_PATH) / "data" / "dash_record.parquet"
+DCMETA_RECORD_PATH = (
+    Path(settings.APP_ROOT_PATH) / "data" / "dcmeta_record_test.parquet"
+)
 RECORD_FIELDS = ["source", "id", "uuid"]
 
 DOCS_MDX_FIELDS = ["header", "source"]
@@ -94,9 +100,10 @@ def check_github() -> Tuple:
 
 @multi_asset(
     outs={
-        "mdx_recs_to_update": AssetOut(is_required=False),
-        "mdx_uuids_to_remove": AssetOut(is_required=False),
-    }
+        "mdx_recs_to_update": AssetOut(),
+        "mdx_uuids_to_remove": AssetOut(),
+    },
+    can_subset=True,
 )
 def handle_github_checking(check_github: Tuple):
     """Handle filelists from git check"""
@@ -141,50 +148,104 @@ def handle_github_checking(check_github: Tuple):
         # this can be both new and to update
         df_to_update = pd.concat(recs_to_update)
         logger.info(f"Records to update: {len(df_to_update)} records")
-        yield Output(df_to_update, output_name="mdx_recs_to_update")
+        # yield Output(df_to_update, output_name="mdx_recs_to_update")
 
     if len(uuids_to_remove) > 0:
         logger.info(f"Records to remove: {len(uuids_to_remove)} records")
-        yield Output(uuids_to_remove, output_name="mdx_uuids_to_remove")
+        # yield Output(uuids_to_remove, output_name="mdx_uuids_to_remove")
+
+    return recs_to_update, uuids_to_remove
 
 
 @asset
-def mdx_vect_update(mdx_recs_to_update: pd.DataFrame) -> pd.DataFrame:
+def mdx_vect_update(mdx_recs_to_update: List, dc_recs_to_update: pd.DataFrame) -> Tuple:
     """Update mdx to vectorstore [Optional]"""
-    vect = WeaviateVectorDB(
-        meta_fields=DOCS_MDX_FIELDS,
-        instance_url=settings.WEAVIATE_URL,
-        index=settings.DOCS_VINDEX,
+    df_mdx_recs_to_update = (
+        pd.concat(mdx_recs_to_update) if len(mdx_recs_to_update) > 0 else pd.DataFrame()
     )
-    vect.update(mdx_recs_to_update)
-    return mdx_recs_to_update
+    recs_to_update = pd.concat([df_mdx_recs_to_update, dc_recs_to_update])
+    if len(recs_to_update) > 0:
+        logger.info(f"Updating {len(recs_to_update)} MDX records to vectorstore")
+        vect = WeaviateVectorDB(
+            meta_fields=DOCS_MDX_FIELDS,
+            instance_url=settings.WEAVIATE_URL,
+            index=settings.DOCS_VINDEX,
+        )
+        vect.update(recs_to_update)
+    return mdx_recs_to_update, dc_recs_to_update
 
 
 @asset
-def mdx_vect_remove(mdx_uuids_to_remove: List) -> List:
+def mdx_vect_remove(mdx_uuids_to_remove: List, dc_uuids_to_remove: List) -> Tuple:
     """Remove mdx from vectorstore [Optional]"""
-    vect = WeaviateVectorDB(
-        meta_fields=DOCS_MDX_FIELDS,
-        instance_url=settings.WEAVIATE_URL,
-        index=settings.DOCS_VINDEX,
-    )
-    vect.remove(mdx_uuids_to_remove)
-    return mdx_uuids_to_remove
+    uuids_to_remove = mdx_uuids_to_remove + dc_uuids_to_remove
+    if len(uuids_to_remove) > 0:
+        logger.info(f"Removing {len(uuids_to_remove)} MDX records from vectorstore")
+        vect = WeaviateVectorDB(
+            meta_fields=DOCS_MDX_FIELDS,
+            instance_url=settings.WEAVIATE_URL,
+            index=settings.DOCS_VINDEX,
+        )
+        vect.remove(uuids_to_remove)
+    return mdx_uuids_to_remove, dc_uuids_to_remove
 
 
 @asset
-def refresh_records(
-    mdx_vect_update: Optional[pd.DataFrame], mdx_vect_remove: Optional[List]
-) -> None:
+def refresh_records(mdx_vect_update: Tuple, mdx_vect_remove: Tuple) -> None:
     """Refresh docs records parquet file after vectorstores are updated"""
+    docs_vect_remove, dc_vect_remove = mdx_vect_remove  # both lists
+    docs_vect_update, dc_vect_update = mdx_vect_update  # list and DF
     df_docs_rec = pd.read_parquet(DOCS_MDX_RECORD_PATH)
-    if mdx_vect_remove is not None:
-        df_docs_rec = df_docs_rec[~df_docs_rec.uuid.isin(mdx_vect_remove)]
-    if mdx_vect_update is not None:
-        df_docs_rec = pd.concat([df_docs_rec, mdx_vect_update])
-    df_docs_rec[RECORD_FIELDS].reset_index(drop=True, inplace=True).to_parquet(
-        DOCS_MDX_RECORD_PATH
+    df_dcmeta_rec = pd.read_parquet(DCMETA_RECORD_PATH)
+
+    if len(docs_vect_remove) > 0:
+        df_docs_rec = df_docs_rec[~df_docs_rec.uuid.isin(docs_vect_remove)]
+    if len(docs_vect_update) > 0:
+        df_docs_rec = pd.concat([df_docs_rec, docs_vect_update])
+    if len(dc_vect_remove) > 0:
+        df_dcmeta_rec = df_dcmeta_rec[~df_dcmeta_rec.uuid.isin(dc_vect_remove)]
+    if len(dc_vect_update) > 0:
+        df_dcmeta_rec = pd.concat([df_dcmeta_rec, dc_vect_update])
+
+    df_docs_rec[RECORD_FIELDS].reset_index(drop=True).to_parquet(DOCS_MDX_RECORD_PATH)
+    df_dcmeta_rec[RECORD_FIELDS].reset_index(drop=True).to_parquet(DCMETA_RECORD_PATH)
+
+
+@multi_asset(
+    outs={
+        "dc_recs_to_update": AssetOut(),
+        "dc_uuids_to_remove": AssetOut(),
+    },
+    can_subset=True,
+)
+def check_dc_metadata():
+    """
+    Check DC metadata file
+    Records to add/remove eventually combined with docs metadata
+    """
+    dcmeta_loader = DCMetaLoader(sources=[settings.DC_META_PARQUET])
+    dc_meta = dcmeta_loader.load()
+
+    # update dc meta records file
+    df_dcmeta_rec = pd.read_parquet(DCMETA_RECORD_PATH)
+    dfmeta_to_add = dc_meta[~dc_meta.id.isin(df_dcmeta_rec.id)]
+    dfmeta_to_remove = df_dcmeta_rec[~df_dcmeta_rec.id.isin(dc_meta.id)]
+    # TODO: support changed metadata
+
+    logger.info(
+        f"Added DC meta: {len(dfmeta_to_add)}, Removed DC meta: {len(dfmeta_to_remove)}"
     )
+
+    if len(dfmeta_to_add) > 0:
+        logger.info(f"DC Records to add: {len(dfmeta_to_add)} records")
+        # yield Output(dfmeta_to_add, output_name="dc_recs_to_update")
+
+    uuids_to_remove = dfmeta_to_remove.uuid.tolist()
+    if len(uuids_to_remove) > 0:
+        logger.info(f"DC Records to remove: {len(uuids_to_remove)} records")
+        # yield Output(uuids_to_remove, output_name="dc_uuids_to_remove")
+
+    return dfmeta_to_add, uuids_to_remove
 
 
 # @asset
@@ -243,21 +304,21 @@ def refresh_records(
 #     )
 #     all_dash_meta = dash_loader.load()
 
-#     df_dash_rec = pd.read_parquet(DASH_RECORD_PATH)
-#     dfmeta_to_add = all_dash_meta[~all_dash_meta.id.isin(df_dash_rec.id)]
-#     dfmeta_to_remove = df_dash_rec[~df_dash_rec.id.isin(all_dash_meta.id)]
-#     # TODO: support changed metadata
+# df_dash_rec = pd.read_parquet(DASH_RECORD_PATH)
+# dfmeta_to_add = all_dash_meta[~all_dash_meta.id.isin(df_dash_rec.id)]
+# dfmeta_to_remove = df_dash_rec[~df_dash_rec.id.isin(all_dash_meta.id)]
+# # TODO: support changed metadata
 
-#     logger.info(
-#         f"Added meta: {len(dfmeta_to_add)}, Removed meta: {len(dfmeta_to_remove)}"
-#     )
+# logger.info(
+#     f"Added meta: {len(dfmeta_to_add)}, Removed meta: {len(dfmeta_to_remove)}"
+# )
 
-#     if len(dfmeta_to_add) > 0:
-#         logger.info(f"Records to add: {len(dfmeta_to_add)} records")
-#         df_dash_rec_new = pd.concat([df_dash_rec, dfmeta_to_add])
-#         yield Output(dfmeta_to_add, output_name="dash_vects_to_update")
+# if len(dfmeta_to_add) > 0:
+#     logger.info(f"Records to add: {len(dfmeta_to_add)} records")
+#     df_dash_rec_new = pd.concat([df_dash_rec, dfmeta_to_add])
+#     yield Output(dfmeta_to_add, output_name="dash_vects_to_update")
 
-#     uuids_to_remove = dfmeta_to_remove.uuid.tolist()
-#     if len(uuids_to_remove) > 0:
-#         logger.info(f"Records to remove: {len(uuids_to_remove)} records")
-#         yield Output(uuids_to_remove, output_name="dash_vects_to_remove")
+# uuids_to_remove = dfmeta_to_remove.uuid.tolist()
+# if len(uuids_to_remove) > 0:
+#     logger.info(f"Records to remove: {len(uuids_to_remove)} records")
+#     yield Output(uuids_to_remove, output_name="dash_vects_to_remove")
