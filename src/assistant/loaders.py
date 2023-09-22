@@ -1,12 +1,10 @@
-from langchain.document_loaders import UnstructuredMarkdownLoader
-from langchain.text_splitter import MarkdownHeaderTextSplitter
-
-from langchain import FAISS
-from langchain.embeddings import OpenAIEmbeddings
+from langchain.text_splitter import (
+    MarkdownHeaderTextSplitter,
+    RecursiveCharacterTextSplitter,
+)
 
 import uuid
 import json
-import base64
 import pandas as pd
 from pathlib import Path
 from typing import Protocol, List
@@ -39,6 +37,11 @@ class MdxLoader(BaseLoader):
             dfm: DataFrame of processed text content and metadata with
                  content_embed, uuid, metadata (header, source)
         """
+        chunk_size = 1024
+        chunk_overlap = 128
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=chunk_size, chunk_overlap=chunk_overlap
+        )
         all_splitted_text = []
         for mdx_file in self.sources:
             markdown_input = read_file_from_repo(
@@ -64,7 +67,10 @@ class MdxLoader(BaseLoader):
 
             for i in range(len(md_header_splits)):
                 md_header_splits[i].metadata.update({"source": relative_path})
-            all_splitted_text += md_header_splits
+
+            # char-level splits to breakdown larger mdx docs
+            recursive_md_header_splits = text_splitter.split_documents(md_header_splits)
+            all_splitted_text += recursive_md_header_splits
 
         # split data for dataframe
         df_data = []
