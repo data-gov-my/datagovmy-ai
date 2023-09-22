@@ -35,6 +35,7 @@ class DocsRetriever(BaseRetriever, BaseModel):
                 update_frequency=dc_meta["update_frequency"],
                 data_sources=dc_meta["data_sources"],
                 data_caveat=dc_meta["data_caveat"],
+                dc_page_id=dc_meta["dc_page_id"],
             )
             return page_content
         else:
@@ -42,14 +43,14 @@ class DocsRetriever(BaseRetriever, BaseModel):
 
     def get_relevant_documents(self, query):
         docs = []
-        for doc in self.vectorstore.similarity_search(query):
+        for doc in self.vectorstore.max_marginal_relevance_search(query, k=4):
             content = self.get_page_content(doc)
             docs.append(Document(page_content=content, metadata=doc.metadata))
 
         return docs
 
     async def _aget_relevant_documents(self, query) -> List[Document]:
-        docs_similar = await self.vectorstore.amax_marginal_relevance_search(query, k=5)
+        docs_similar = await self.vectorstore.amax_marginal_relevance_search(query, k=4)
         docs = []
         for doc in docs_similar:
             content = self.get_page_content(doc)
@@ -119,7 +120,7 @@ def create_chain(
 
     llm = ChatOpenAI(
         model="gpt-3.5-turbo",
-        max_tokens=2000,
+        max_tokens=2500,
         temperature=0,
         openai_api_key=settings.OPENAI_API_KEY,
         openai_organization=settings.OPENAI_ORG_ID,
