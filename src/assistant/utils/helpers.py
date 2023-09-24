@@ -74,28 +74,22 @@ def send_telegram(message: str) -> None:
         r = requests.get(url=tf_url, data=params)
 
 
-def read_file_from_repo(repo: str, file_path: str, token: str):
+def read_file_from_repo(repo: str, token: str, file_url: str):
     """Read file from GitHub repo.
 
     Args:
         repo (str): GitHub repo name
-        file_path (str): path to file in repo
         token (str): GitHub token
+        file_url (str): url to file in repo
 
     Returns:
         str: file content
     """
 
-    api_url = f"https://api.github.com/repos/{repo}/contents/{file_path}"
     headers = {"Authorization": f"token {token}"}
 
     # Send the request
-    response = requests.get(api_url, headers=headers)
+    response = requests.get(file_url, headers=headers)
     response.raise_for_status()
 
-    file_data = response.json()
-
-    # Decode the file content from Base64
-    content = base64.b64decode(file_data["content"]).decode("utf-8")
-
-    return content
+    return response.text
