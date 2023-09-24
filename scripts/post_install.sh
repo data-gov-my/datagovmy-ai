@@ -46,5 +46,6 @@ systemctl daemon-reload
 cron_job="0 * * * * ${CD_INSTALL_TARGET}/env/bin/python ${CD_INSTALL_TARGET}/src/assistant/ingest.py"
 if ! (crontab -l | grep -q "$cron_job"); then
     (crontab -l ; echo "$cron_job") | crontab -
+fi
 
 echo "[${DATESTAMP}] post install step completed"
