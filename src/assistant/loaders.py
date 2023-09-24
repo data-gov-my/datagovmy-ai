@@ -26,8 +26,9 @@ class BaseLoader(Protocol):
 class MdxLoader(BaseLoader):
     """Implementation of BaseLoader for MDX files."""
 
-    def __init__(self, sources: List[str]):
+    def __init__(self, sources: List[str], mdx_type: str):
         self.sources = sources
+        self.mdx_type = mdx_type
         # self.additional_param = additional_param
 
     def load(self) -> pd.DataFrame:
@@ -43,9 +44,9 @@ class MdxLoader(BaseLoader):
             chunk_size=chunk_size, chunk_overlap=chunk_overlap
         )
         all_splitted_text = []
-        for mdx_file in self.sources:
+        for mdx_file_url in self.sources:
             markdown_input = read_file_from_repo(
-                settings.GITHUB_REPO, mdx_file, settings.GITHUB_TOKEN
+                settings.GITHUB_REPO, settings.GITHUB_TOKEN, mdx_file_url
             )
 
             headers_to_split_on = [
@@ -61,9 +62,14 @@ class MdxLoader(BaseLoader):
             md_header_splits = markdown_splitter.split_text(markdown_input)
 
             # add file info to metadata
-            path = Path(mdx_file)
-            pages_dir = next(p for p in path.parents if p.name == "pages")
-            relative_path = str(path.relative_to(pages_dir))
+            path = Path(mdx_file_url)
+            if self.mdx_type == "docs":
+                # docs mdx - take path after 'pages' in pages/data-catalogue/overview.en.mdx
+                pages_dir = next(p for p in path.parents if p.name == "pages")
+                relative_path = str(path.relative_to(pages_dir))
+            elif self.mdx_type == "local":
+                # local mdx - use filename?
+                relative_path = path.name
 
             for i in range(len(md_header_splits)):
                 md_header_splits[i].metadata.update({"source": relative_path})
@@ -115,12 +121,6 @@ class MdxLoader(BaseLoader):
 
         # strip .en.mdx from filename
         dfm.source = dfm.source.str[:-7]
-        # create unique id - combo of header and source
-        # when new list of mdx files are parsed, create similar id and join with this dataframe
-        dfm["id"] = dfm.header + " " + dfm.source
-        # however, weaviate needs uuid as id
-        dfm["uuid"] = [str(uuid.uuid4()) for i in range(len(dfm))]
-
         # content to embed is combo of header and page_content
         dfm["content_embed"] = dfm.apply(
             lambda row: row.header + " " + row.page_content, axis=1
@@ -293,9 +293,6 @@ class DCMetaLoader(BaseLoader):
             "file_name": "id",
         }
         dfmeta_byfile = dfmeta_byfile.rename(to_rename, axis=1)
-
-        # generate uuid for weaviate db
-        dfmeta_byfile["uuid"] = [str(uuid.uuid4()) for i in range(len(dfmeta_byfile))]
 
         # format metadata for embeddings
         cols_to_concat = [

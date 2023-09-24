@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = Field(..., env="OPENAI_API_KEY")
     OPENAI_ORG_ID: str = Field(..., env="OPENAI_ORG_ID")
     WEAVIATE_URL: str = Field(..., env="WEAVIATE_URL")
+    VECT_ROOT_PATH: str = Field(..., env="VECT_ROOT_PATH")
+    REC_MGR_CONN_STR: str = Field(..., env="REC_MGR_CONN_STR")
     DOCS_VINDEX: str = Field(..., env="DOCS_VINDEX")
     DC_META_VINDEX: str = Field(..., env="DC_META_VINDEX")
     DATA_VINDEX: str = Field(..., env="DATA_VINDEX")
