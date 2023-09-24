@@ -110,8 +110,12 @@ def run_index(docs, class_name):
     index_result = index(
         docs, record_manager, weaviate_lc, cleanup="full", source_id_key="source"
     )
-
-    send_telegram(f"Vector index updated for {class_name}: {index_result}")
+    if (
+        index_result["num_added"] > 0
+        or index_result["num_updated"] > 0
+        or index_result["num_deleted"] > 0
+    ):
+        send_telegram(f"Vector index updated for {class_name}: {index_result}")
 
 
 if __name__ == "__main__":
