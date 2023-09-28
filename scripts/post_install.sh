@@ -43,9 +43,9 @@ ln -s ${DOCS_API_ROOT}/config/*.service /etc/systemd/system/
 systemctl daemon-reload
 
 # install ingest crontab
-cron_job="0 * * * * ${CD_INSTALL_TARGET}/env/bin/python ${CD_INSTALL_TARGET}/src/assistant/ingest.py"
-if ! (sudo -u ubuntu crontab -l | grep -q "$cron_job"); then
-    (sudo -u ubuntu crontab -l ; echo "$cron_job") | sudo -u ubuntu crontab -
-fi
+# cron_job="0 * * * * ${CD_INSTALL_TARGET}/scripts/ingest.sh"
+# if ! (sudo -u ubuntu crontab -l | grep -q "$cron_job"); then
+#     (sudo -u ubuntu crontab -l ; echo "$cron_job") | sudo -u ubuntu crontab -
+# fi
 
 echo "[${DATESTAMP}] post install step completed"
