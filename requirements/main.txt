@@ -151,7 +151,7 @@ protobuf==4.24.2
     # via
     #   dagster
     #   grpcio-health-checking
-pyarrow==13.0.0
+pyarrow==14.0.1
     # via datagovmy-ai (pyproject.toml)
 pycparser==2.21
     # via cffi
