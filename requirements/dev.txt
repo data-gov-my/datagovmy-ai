@@ -271,7 +271,7 @@ jupyterlab-widgets==3.0.8
     # via ipywidgets
 lanarky==0.7.13
     # via datagovmy-ai (pyproject.toml)
-langchain==0.0.283
+langchain==0.0.329
     # via
     #   datagovmy-ai (pyproject.toml)
     #   lanarky
