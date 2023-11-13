@@ -16,6 +16,7 @@ dependencies = [
     "redis",
     "fastapi-cache2[redis]",
     "uvicorn",
+    "pydantic-settings"
 ]
 
 [project.optional-dependencies]

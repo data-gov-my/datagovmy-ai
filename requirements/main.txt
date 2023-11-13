@@ -169,8 +169,11 @@ pydantic==2.4.2
     #   fastapi
     #   langchain
     #   langsmith
+    #   pydantic-settings
 pydantic-core==2.10.1
     # via pydantic
+pydantic-settings==2.0.3
+    # via datagovmy-ai (pyproject.toml)
 python-dateutil==2.8.2
     # via
     #   croniter
@@ -181,6 +184,7 @@ python-dotenv==1.0.0
     # via
     #   dagster
     #   lanarky
+    #   pydantic-settings
     #   uvicorn
 pytz==2023.3.post1
     # via
