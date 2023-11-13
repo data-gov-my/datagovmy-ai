@@ -77,9 +77,10 @@ def get_health():
 async def lifespan(app: FastAPI):
     redis = aioredis.from_url("redis://")
     FastAPICache.init(RedisBackend(redis), prefix="")
+    yield
 
 
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 app.include_router(router, tags=["chat"])
 
 app.add_middleware(
