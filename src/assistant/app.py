@@ -1,4 +1,5 @@
 from fastapi import Depends, FastAPI, status
+from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security.api_key import APIKey
 from fastapi_cache import FastAPICache
@@ -72,6 +73,12 @@ def get_health():
     return HealthCheck(status="OK")
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    redis = aioredis.from_url("redis://")
+    FastAPICache.init(RedisBackend(redis), prefix="")
+
+
 app = FastAPI()
 app.include_router(router, tags=["chat"])
 
@@ -82,9 +89,3 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-@app.on_event("startup")
-async def startup():
-    redis = aioredis.from_url("redis://")
-    FastAPICache.init(RedisBackend(redis), prefix="")

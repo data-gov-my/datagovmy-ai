@@ -1,5 +1,7 @@
 from enum import Enum
-from pydantic import BaseSettings, Field, validator
+
+from pydantic import Field, validator
+from pydantic_settings import BaseSettings
 from typing import List, Union
 
 
@@ -9,7 +11,7 @@ class AppEnvironment(str, Enum):
     PRODUCTION = "prod"
 
 
-class Settings(BaseSettings):
+class Settings(BaseSettings, extra="allow"):
     ENVIRONMENT: str = Field(AppEnvironment.DEV, env="ENVIRONMENT")
     BACKEND_CORS_ORIGINS: List[str] = Field(..., env="BACKEND_CORS_ORIGINS")
     APP_ROOT_PATH: str = Field(..., env="APP_ROOT_PATH")
