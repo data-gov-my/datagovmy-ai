@@ -38,6 +38,8 @@ class MdxLoader(BaseLoader):
             dfm: DataFrame of processed text content and metadata with
                  content_embed, uuid, metadata (header, source)
         """
+        raw_chunks_to_remove = ['import Head from "next/head";', r"<Head>.*?</Head>"]
+
         chunk_size = 1024
         chunk_overlap = 128
         text_splitter = RecursiveCharacterTextSplitter(
@@ -48,6 +50,12 @@ class MdxLoader(BaseLoader):
             markdown_input = read_file_from_repo(
                 settings.GITHUB_REPO, settings.GITHUB_TOKEN, mdx_file_url
             )
+
+            # clean raw input for certain corner cases
+            for remove_pattern in raw_chunks_to_remove:
+                markdown_input = re.sub(
+                    remove_pattern, "", markdown_input, flags=re.DOTALL
+                )
 
             headers_to_split_on = [
                 # we're skipping H1 headers here due to clash with # comments in code blocks
