@@ -14,7 +14,7 @@ from config import *
 from utils.templates import CATALOGUE_ID_TEMPLATE
 
 
-class DocsRetriever(BaseRetriever, BaseModel):
+class DocsRetriever(BaseRetriever):
     vectorstore: VectorStore
 
     class Config:
@@ -41,7 +41,7 @@ class DocsRetriever(BaseRetriever, BaseModel):
         else:
             return doc.page_content
 
-    def get_relevant_documents(self, query):
+    def _get_relevant_documents(self, query):
         docs = []
         for doc in self.vectorstore.max_marginal_relevance_search(query, k=4):
             content = self.get_page_content(doc)

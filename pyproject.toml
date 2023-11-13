@@ -10,7 +10,7 @@ dependencies = [
     "dagster",
     "dagster-webserver",
     "pandas",
-    "openai",
+    "openai==0.28.1",
     "pyarrow",
     "tiktoken",
     "redis",

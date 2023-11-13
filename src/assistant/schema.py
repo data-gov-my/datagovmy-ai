@@ -14,7 +14,9 @@ class ChainType(StrEnum):
 
 
 class Message(BaseModel):
-    role: constr(regex=f"^({Role.ASSISTANT}|{Role.USER}|{Role.SYSTEM})$")  # noqa: E501
+    role: constr(
+        pattern=f"^({Role.ASSISTANT}|{Role.USER}|{Role.SYSTEM})$"
+    )  # noqa: E501
     content: str
 
 
