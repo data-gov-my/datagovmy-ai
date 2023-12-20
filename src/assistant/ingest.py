@@ -119,5 +119,8 @@ def run_index(docs, class_name):
 
 
 if __name__ == "__main__":
-    mdx_docs = load_mdx_docs()
-    run_index(mdx_docs, settings.DOCS_VINDEX)
+    try:
+        mdx_docs = load_mdx_docs()
+        run_index(mdx_docs, settings.DOCS_VINDEX)
+    except Exception as e:
+        send_telegram(f"Error in docs ingest: {e}")
