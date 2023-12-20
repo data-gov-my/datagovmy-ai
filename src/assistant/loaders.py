@@ -197,8 +197,7 @@ class DCMetaLoader(BaseLoader):
         dfmeta = pd.read_parquet(meta_file)
         dfmeta = dfmeta[dfmeta.exclude_openapi == 0]  # index only openAPI DCs
         dfmeta["dc_page_id"] = dfmeta.apply(
-            lambda row: "_".join([row["bucket"], row["file_name"], str(row["id"])]),
-            axis=1,
+            lambda row: "_".join([row["bucket"], row["file_name"]]), axis=1
         )
 
         # drop bm translation columns
@@ -213,23 +212,23 @@ class DCMetaLoader(BaseLoader):
         ).apply(pd.Series)
 
         # group column metadata in different formats
-        dfmeta_byfile = dfmeta[dfmeta.id > 0].groupby("file_name").first()
+        dfmeta_byfile = dfmeta[dfmeta.id == 0].groupby("file_name").first()
         dfmeta_byfile["col_meta"] = dfmeta.groupby("file_name").apply(
             lambda group_df: "\n".join(
-                group_df[group_df.id > 0].apply(
+                group_df[group_df.id < 0].apply(
                     lambda row: row.title_en.strip() + " " + row.desc_en.strip(), axis=1
                 )
             )
         )
         dfmeta_byfile["col_meta_clean"] = dfmeta.groupby("file_name").apply(
             lambda group_df: " ".join(
-                group_df[group_df.id > 0].apply(
+                group_df[group_df.id < 0].apply(
                     lambda row: row.title_en.strip() + " " + row.desc_en.strip(), axis=1
                 )
             )
         )
         dfmeta_byfile["col_meta_dict"] = dfmeta.groupby("file_name").apply(
-            lambda group_df: group_df[group_df.id > 0][
+            lambda group_df: group_df[group_df.id < 0][
                 ["name", "col_data_type", "col_description"]
             ].to_dict(orient="records")
         )
