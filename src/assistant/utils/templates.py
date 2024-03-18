@@ -9,7 +9,7 @@ GET https://api.data.gov.my/data-catalogue?id={id}
 
 More information about this dataset:
 Dataset page: https://data.gov.my/data-catalogue/{dc_page_id}
-{description} {data_methodology} It is updated on a {update_frequency} basis. Data sources: {data_sources}.
+{description} {data_methodology} It is updated on a {update_frequency} basis. Data sources: {data_source}.
 {data_caveat}
 
 To discover all other available datasets, visit the [Data Catalogue page](https://data.gov.my/data-catalogue)."""
