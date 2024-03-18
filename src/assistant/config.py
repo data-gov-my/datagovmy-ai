@@ -41,6 +41,7 @@ class Settings(BaseSettings, extra="allow"):
     DASH_META_JSON: str = Field(default=None, env="DASH_META_JSON")
     DASH_META_PARQUET: str = Field(default=None, env="DASH_META_PARQUET")
     DC_META_PARQUET: str = Field(default=None, env="DC_META_PARQUET")
+    DC_METAFIELDS_PARQUET: str = Field(default=None, env="DC_METAFIELDS_PARQUET")
 
     class Config:
         env_file = ".env"
