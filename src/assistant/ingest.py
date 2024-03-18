@@ -8,6 +8,7 @@ For docs AI:
 
 Downside is need to load and parse everything regardless.
 """
+
 import weaviate
 import requests
 import pandas as pd
@@ -72,7 +73,9 @@ def load_mdx_docs() -> List:
     df_mdx_local = mdx_local_loader.load()
 
     # load DC metadata
-    dc_meta_loader = DCMetaLoader([settings.DC_META_PARQUET])
+    dc_meta_loader = DCMetaLoader(
+        [settings.DC_META_PARQUET, settings.DC_METAFIELDS_PARQUET]
+    )
     df_dcmeta = dc_meta_loader.load()
 
     # combine

@@ -194,74 +194,69 @@ class DCMetaLoader(BaseLoader):
             dfm: DataFrame of processed text content and metadata
         """
         meta_file = self.sources[0]
+        metafields_file = self.sources[1]
         dfmeta = pd.read_parquet(meta_file)
-        dfmeta = dfmeta[dfmeta.exclude_openapi == 0]  # index only openAPI DCs
-        dfmeta["dc_page_id"] = dfmeta.apply(
-            lambda row: "_".join([row["bucket"], row["file_name"]]), axis=1
-        )
-
-        # drop bm translation columns
-        columns_to_drop = dfmeta.columns[
-            (dfmeta.columns.str.contains("_bm")) | (dfmeta.columns.str.contains(".bm"))
-        ]
-        dfmeta.drop(columns_to_drop, axis=1, inplace=True)
+        dfmeta_fields = pd.read_parquet(metafields_file)
+        dfmeta = dfmeta.merge(dfmeta_fields, on="id", suffixes=["", "_fields"])
+        dfmeta = dfmeta[~dfmeta.exclude_openapi]
+        # dc_page_id is now id
 
         # parse column desc to extract datatype and descriptions
-        dfmeta[["col_data_type", "col_description"]] = dfmeta.desc_en.apply(
+        dfmeta[["col_data_type", "col_description"]] = dfmeta.var_description_en.apply(
             parse_desc
         ).apply(pd.Series)
 
         # group column metadata in different formats
-        dfmeta_byfile = dfmeta[dfmeta.id == 0].groupby("file_name").first()
-        dfmeta_byfile["col_meta"] = dfmeta.groupby("file_name").apply(
+        dfmeta_byfile = dfmeta.groupby("id").first()
+        dfmeta_byfile["col_meta"] = dfmeta.groupby("id").apply(
             lambda group_df: "\n".join(
-                group_df[group_df.id < 0].apply(
-                    lambda row: row.title_en.strip() + " " + row.desc_en.strip(), axis=1
+                group_df.apply(
+                    lambda row: row.var_title_en.strip()
+                    + " "
+                    + row.var_description_en.strip(),
+                    axis=1,
                 )
             )
         )
-        dfmeta_byfile["col_meta_clean"] = dfmeta.groupby("file_name").apply(
+        dfmeta_byfile["col_meta_clean"] = dfmeta.groupby("id").apply(
             lambda group_df: " ".join(
-                group_df[group_df.id < 0].apply(
-                    lambda row: row.title_en.strip() + " " + row.desc_en.strip(), axis=1
+                group_df.apply(
+                    lambda row: row.var_title_en.strip()
+                    + " "
+                    + row.var_description_en.strip(),
+                    axis=1,
                 )
             )
         )
-        dfmeta_byfile["col_meta_dict"] = dfmeta.groupby("file_name").apply(
-            lambda group_df: group_df[group_df.id < 0][
-                ["name", "col_data_type", "col_description"]
+        dfmeta_byfile["col_meta_dict"] = dfmeta.groupby("id").apply(
+            lambda group_df: group_df[
+                ["var_name", "col_data_type", "col_description"]
             ].to_dict(orient="records")
         )
 
-        # convert columns to numeric
         dfmeta_numcols = [
-            "catalog_data.catalog_filters.start",
-            "catalog_data.catalog_filters.end",
+            "dataset_begin",
+            "dataset_end",
         ]
         for numcol in dfmeta_numcols:
             dfmeta_byfile[numcol] = pd.to_numeric(dfmeta_byfile[numcol])
 
         # convert start end to date range eg. 1955-2023
         dfmeta_byfile["date_range_int"] = (
-            dfmeta_byfile["catalog_data.catalog_filters.end"]
-            - dfmeta_byfile["catalog_data.catalog_filters.start"]
+            dfmeta_byfile["dataset_end"] - dfmeta_byfile["dataset_begin"]
         )
         dfmeta_byfile["date_range"] = dfmeta_byfile.apply(
-            lambda row: str(int(row["catalog_data.catalog_filters.start"]))
-            if row.date_range_int == 0
-            else str(int(row["catalog_data.catalog_filters.start"]))
-            + "-"
-            + str(int(row["catalog_data.catalog_filters.start"])),
+            lambda row: (
+                str(int(row["dataset_begin"]))
+                if row.date_range_int == 0
+                else str(int(row["dataset_begin"]))
+                + "-"
+                + str(int(row["dataset_begin"]))
+            ),
             axis=1,
         )
 
-        dfmeta_byfile["catalog_data.catalog_filters.frequency"] = dfmeta_byfile[
-            "catalog_data.catalog_filters.frequency"
-        ].str.lower()
-
-        dfmeta_byfile["data_sources"] = dfmeta_byfile[
-            "catalog_data.catalog_filters.data_source"
-        ].apply(parse_list_string)
+        dfmeta_byfile["frequency"] = dfmeta_byfile["frequency"].str.lower()
         dfmeta_byfile.reset_index(inplace=True)
 
         to_drop = [
