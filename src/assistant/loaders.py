@@ -259,40 +259,32 @@ class DCMetaLoader(BaseLoader):
         dfmeta_byfile["frequency"] = dfmeta_byfile["frequency"].str.lower()
         dfmeta_byfile.reset_index(inplace=True)
 
+        # remove from meta
         to_drop = [
-            "category",  # machine name, we only need descriptive english
-            "subcategory",  # machine name, we only need descriptive english
-            "catalog_data.catalog_filters.start",
-            "catalog_data.catalog_filters.end",
-            "catalog_data.catalog_filters.geography",
-            "catalog_data.catalog_filters.demography",
-            "catalog_data.catalog_filters.data_source",
-            "catalog_data.chart.chart_filters.SLICE_BY",
-            "catalog_data.chart.chart_filters.precision",
-            "catalog_data.chart.chart_variables.parents",
-            "catalog_data.metadata_lang.en.publication",
+            "dataset_begin",
+            "dataset_end",
+            "geography",
+            "demography",
+            "data_source_primary",
             "date_range_int",
-            "id",
-            "name",  # machine name, we only need descriptive english - subcategory
+            "var_name",  # machine name, we only need descriptive english - subcategory
             "col_data_type",
             "col_description",
             "exclude_openapi",
-            "bucket",
-            "title_en",  # for columns meta
-            "desc_en",  # for columns meta
+            "var_title_en",  # for columns meta
+            "var_description_en",  # for columns meta
         ]
 
         dfmeta_byfile = dfmeta_byfile.drop(to_drop, axis=1)
 
         to_rename = {
-            "catalog_data.catalog_filters.frequency": "update_frequency",
-            "catalog_data.metadata_lang.en.methodology": "data_methodology",
-            "catalog_data.metadata_lang.en.caveat": "data_caveat",
-            "catalog_data.chart.chart_type": "chart_type",
+            "frequency": "update_frequency",
+            "methodology_en": "data_methodology",
+            "caveat_en": "data_caveat",
+            # "catalog_data.chart.chart_type": "chart_type",
             "category_en": "category",
             "subcategory_en": "subcategory",
-            "description.en": "description",
-            "file_name": "id",
+            "description_en": "description",
         }
         dfmeta_byfile = dfmeta_byfile.rename(to_rename, axis=1)
 
@@ -301,7 +293,7 @@ class DCMetaLoader(BaseLoader):
             "subcategory",
             "category",
             "description",
-            "data_sources",
+            "data_source",
             "col_meta_clean",
         ]
         dfmeta_byfile["content_embed"] = dfmeta_byfile[cols_to_concat].apply(
@@ -316,9 +308,9 @@ class DCMetaLoader(BaseLoader):
             "description",
             "data_methodology",
             "update_frequency",
-            "data_sources",
+            "data_source",
             "data_caveat",
-            "dc_page_id",
+            "id",
         ]
         dfmeta_byfile["header"] = dfmeta_byfile[metacols_for_header].to_dict(
             orient="records"
