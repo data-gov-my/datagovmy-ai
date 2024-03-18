@@ -33,7 +33,7 @@ class DocsRetriever(BaseRetriever):
                 description=dc_meta["description"],
                 data_methodology=dc_meta["data_methodology"],
                 update_frequency=dc_meta["update_frequency"],
-                data_sources=dc_meta["data_sources"],
+                data_source=dc_meta["data_source"],
                 data_caveat=dc_meta["data_caveat"],
                 dc_page_id=dc_meta["dc_page_id"],
             )
