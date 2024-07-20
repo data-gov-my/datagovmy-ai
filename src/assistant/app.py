@@ -7,16 +7,23 @@ from fastapi_cache.backends.redis import RedisBackend
 
 from redis import asyncio as aioredis
 
-from lanarky.responses import StreamingResponse
-from lanarky.routing import LangchainRouter, LLMCacheMode
+from langserve import add_routes
+from langserve.schema import CustomUserType
 
 from dotenv import load_dotenv
 import logging
 
 from config import *
 from auth import APIKeyManager, get_token, get_master_token, key_manager
-from schema import ChatRequest, HealthCheck, TokenUpdate, TokenUpdateResponse, ChainType
-from chain import create_chain
+from schema import (
+    ChatRequest,
+    HealthCheck,
+    TokenUpdate,
+    TokenUpdateResponse,
+    ChainType,
+    Message,
+)
+from chain import create_new_chain
 
 load_dotenv()
 
@@ -31,46 +38,10 @@ class EndpointFilter(logging.Filter):
 
 logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
 
-# only in-memory caching works for chat models
-router = LangchainRouter(
-    llm_cache_mode=LLMCacheMode.IN_MEMORY,
-)
 
-
-@router.post(
-    "/chat",
-    summary="OpenAPI Docs Assistant",
-    description="Chat with the open API documentation assistant",
-)
-def chat(request: ChatRequest, api_key: APIKey = Depends(get_token)):
-    # take only latest MAX_MESSAGES
-    chain = create_chain(
-        chain_type=request.chain_type, messages=request.messages[-MAX_MESSAGES - 1 : -1]
-    )
-    return StreamingResponse.from_chain(chain, request.messages[-1].content)
-
-
-@router.post(
-    "/auth-token",
-    response_model=TokenUpdateResponse,
-    responses={status.HTTP_401_UNAUTHORIZED: dict(model=TokenUpdateResponse)},
-)
-async def update_token(
-    payload: TokenUpdate, api_key: APIKey = Depends(get_master_token)
-):
-    await key_manager.update_key(payload.ROLLING_TOKEN)
-    return TokenUpdateResponse(message="Auth token received.")
-
-
-@router.get(
-    "/health",
-    summary="Health Check for ELB",
-    response_description="Return HTTP Status Code 200 (OK)",
-    status_code=status.HTTP_200_OK,
-    response_model=HealthCheck,
-)
-def get_health():
-    return HealthCheck(status="OK")
+class NewChatReqest(CustomUserType):
+    # chain_type: ChainType = ChainType.DOCS
+    messages: list
 
 
 @asynccontextmanager
@@ -81,8 +52,6 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
-app.include_router(router, tags=["chat"])
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.BACKEND_CORS_ORIGINS,
@@ -90,3 +59,43 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+rag_chain = create_new_chain()
+
+add_routes(
+    app,
+    rag_chain,
+    path="/chat",
+)
+
+
+@app.get("/health", response_model=HealthCheck)
+def get_health():
+    return HealthCheck(status="OK")
+
+
+@app.post(
+    "/auth-token",
+    response_model=TokenUpdateResponse,
+)
+async def update_token(
+    payload: TokenUpdate, api_key: APIKey = Depends(get_master_token)
+):
+    if not api_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing API Key",
+        )
+    await key_manager.update_key(payload.ROLLING_TOKEN)
+    return TokenUpdateResponse(message="Auth token received.")
+
+
+@app.get(
+    "/health",
+    summary="Health Check for ELB",
+    response_description="Return HTTP Status Code 200 (OK)",
+    status_code=status.HTTP_200_OK,
+    response_model=HealthCheck,
+)
+def get_health():
+    return HealthCheck(status="OK")
