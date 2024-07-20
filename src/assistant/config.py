@@ -11,7 +11,7 @@ class AppEnvironment(str, Enum):
     PRODUCTION = "prod"
 
 
-class Settings(BaseSettings, extra="allow"):
+class AppSettings(BaseSettings, extra="allow"):
     ENVIRONMENT: str = Field(AppEnvironment.DEV, env="ENVIRONMENT")
     BACKEND_CORS_ORIGINS: List[str] = Field(..., env="BACKEND_CORS_ORIGINS")
     APP_ROOT_PATH: str = Field(..., env="APP_ROOT_PATH")
@@ -63,4 +63,4 @@ class Settings(BaseSettings, extra="allow"):
         raise ValueError(v)
 
 
-settings = Settings()
+settings = AppSettings()

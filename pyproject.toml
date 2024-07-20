@@ -4,19 +4,16 @@ version = "1.0"
 dependencies = [
     "fastapi",
     "langchain",
-    "lanarky",
     "faiss-cpu",
     "weaviate-client",
-    "dagster",
-    "dagster-webserver",
     "pandas",
-    "openai==0.28.1",
+    "openai",
     "pyarrow",
     "tiktoken",
     "redis",
     "fastapi-cache2[redis]",
     "uvicorn",
-    "pydantic-settings"
+    "pydantic-settings",
 ]
 
 [project.optional-dependencies]
