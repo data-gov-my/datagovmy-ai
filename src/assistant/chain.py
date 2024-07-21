@@ -1,11 +1,10 @@
 import json
-from typing import Any, Coroutine, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import chromadb
 from chromadb.config import Settings
 from langchain_openai.chat_models import ChatOpenAI
 from langchain_openai.embeddings import OpenAIEmbeddings
-from langchain.memory.chat_message_histories.in_memory import ChatMessageHistory
 from langchain.prompts.chat import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
@@ -18,19 +17,23 @@ from langchain.retrievers import EnsembleRetriever
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.vectorstores import VectorStore
 from langchain_core.runnables import (
-    RunnableLambda,
-    ConfigurableFieldSpec,
     RunnablePassthrough,
+    RunnableParallel,
 )
-from langchain_core.messages import BaseMessage, AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from langchain_chroma import Chroma
 
 from operator import itemgetter
 
-from prompts import QA_DOCS_PREFIX, QA_SUFFIX_NEW, QUERY_EXPAND_PROMPT
+from prompts import (
+    QA_DOCS_PREFIX,
+    QA_SUFFIX_NEW,
+    QUERY_EXPAND_PROMPT,
+    QUERY_REWRITE_PROMPT,
+)
 from schema import *
 from config import *
-from utils.templates import CATALOGUE_ID_TEMPLATE
+from utils.templates import CATALOGUE_ID_TEMPLATE, CATALOGUE_ID_NOAPI_TEMPLATE
 
 
 class DocsRetriever(BaseRetriever):
@@ -45,7 +48,11 @@ class DocsRetriever(BaseRetriever):
         # if dc_meta source, inject catalogue name and id into open API guide
         if "dc_meta" in doc.metadata["source"]:
             dc_meta = json.loads(metadata["header"])
-            page_content = CATALOGUE_ID_TEMPLATE.format(
+            if dc_meta["exclude_openapi"]:
+                template = CATALOGUE_ID_NOAPI_TEMPLATE
+            else:
+                template = CATALOGUE_ID_TEMPLATE
+            page_content = template.format(
                 subcategory=dc_meta["subcategory"],
                 category=dc_meta["category"],
                 id=dc_meta["id"],
@@ -54,7 +61,6 @@ class DocsRetriever(BaseRetriever):
                 update_frequency=dc_meta["update_frequency"],
                 # data_source=dc_meta["data_source"],
                 data_caveat=dc_meta["data_caveat"],
-                dc_page_id=dc_meta["id"],
             )
             return page_content
         else:
@@ -77,7 +83,7 @@ class DocsRetriever(BaseRetriever):
 
 
 def create_new_chain():
-    embedding_llm = OpenAIEmbeddings()
+    embedding_llm = OpenAIEmbeddings(model="text-embedding-3-small")
 
     llm = ChatOpenAI(
         model="gpt-4o-mini",
@@ -97,11 +103,11 @@ def create_new_chain():
 
     custom_docs_retriever = DocsRetriever(vectorstore=db)
 
-    prompt = ChatPromptTemplate.from_template(QUERY_EXPAND_PROMPT)
+    query_expand_prompt = ChatPromptTemplate.from_template(QUERY_EXPAND_PROMPT)
 
     generate_queries = (
         {"question": RunnablePassthrough()}
-        | prompt
+        | query_expand_prompt
         | ChatOpenAI(model="gpt-4o-mini", temperature=0.7)
         | StrOutputParser()
         | (lambda x: x.split("\n"))
@@ -146,9 +152,23 @@ def create_new_chain():
 
     qa_chain = chat_prompt | llm | StrOutputParser()
 
+    # query rewriting to handle low-context questions
+    query_rewrite_prompt = ChatPromptTemplate.from_template(QUERY_REWRITE_PROMPT)
+    query_rewrite_chain = (
+        query_rewrite_prompt
+        | ChatOpenAI(model="gpt-4o-mini", temperature=0.7)
+        | StrOutputParser()
+    )
+
     rag_chain = (
-        RunnableLambda(format_messages)
-        | RunnablePassthrough.assign(context=multi_query_retriever_chain)
+        format_messages
+        | RunnableParallel(
+            {
+                "context": multi_query_retriever_chain,
+                "query": query_rewrite_chain,
+                "history": itemgetter("history"),
+            }
+        )
         | qa_chain
     )
 

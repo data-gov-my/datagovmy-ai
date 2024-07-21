@@ -115,6 +115,7 @@ class MdxLoader(BaseLoader):
         to_exclude_header_source = [
             ("Example Request", "static-api/opendosm.en.mdx"),
             ("Request Query & Response Format", "static-api/opendosm.en.mdx"),
+            ("How to Find Available Resources", "static-api/opendosm.en.mdx"),
         ]
 
         dfm = dfm[~dfm.header.isin(to_exclude_headers)]
@@ -198,7 +199,7 @@ class DCMetaLoader(BaseLoader):
         dfmeta = pd.read_parquet(meta_file)
         dfmeta_fields = pd.read_parquet(metafields_file)
         dfmeta = dfmeta.merge(dfmeta_fields, on="id", suffixes=["", "_fields"])
-        dfmeta = dfmeta[~dfmeta.exclude_openapi]
+        # dfmeta = dfmeta[~dfmeta.exclude_openapi]
         # dc_page_id is now id
 
         # parse column desc to extract datatype and descriptions
@@ -270,7 +271,7 @@ class DCMetaLoader(BaseLoader):
             "var_name",  # machine name, we only need descriptive english - subcategory
             "col_data_type",
             "col_description",
-            "exclude_openapi",
+            # "exclude_openapi",
             "var_title_en",  # for columns meta
             "var_description_en",  # for columns meta
         ]
@@ -310,6 +311,7 @@ class DCMetaLoader(BaseLoader):
             "update_frequency",
             "data_source",
             "data_caveat",
+            "exclude_openapi",
             "id",
         ]
         dfmeta_byfile["header"] = dfmeta_byfile[metacols_for_header].to_dict(
