@@ -9,7 +9,9 @@ For docs AI:
 Downside is need to load and parse everything regardless.
 """
 
-import weaviate
+import chromadb
+from chromadb.config import Settings
+from langchain_chroma import Chroma
 import requests
 import pandas as pd
 from dotenv import load_dotenv
@@ -91,27 +93,22 @@ def load_mdx_docs() -> List:
 
 
 def run_index(docs, class_name):
-    # connect to weaviate vectorstore
-    oai_embeddings = OpenAIEmbeddings()
-    client = weaviate.Client(url=settings.WEAVIATE_URL)
-    attributes = ["header", "source"]
-    weaviate_lc = Weaviate(
-        client,
-        class_name,  # capitalized
-        "text",  # constant
-        embedding=oai_embeddings,
-        attributes=attributes,
-        by_text=False,  # force vector search
+    # connect to chroma db vectorstore
+    oai_embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+    chroma_db = Chroma(
+        client=client,
+        collection_name="dgmy_docs",
+        embedding_function=oai_embeddings,
     )
 
     # initialise record manager
     conn_str = settings.REC_MGR_CONN_STR
-    namespace = f"weaviate/{class_name}"
+    namespace = f"chroma/{class_name}"
     record_manager = SQLRecordManager(namespace, db_url=conn_str)
     record_manager.create_schema()
 
     index_result = index(
-        docs, record_manager, weaviate_lc, cleanup="full", source_id_key="source"
+        docs, record_manager, chroma_db, cleanup="full", source_id_key="source"
     )
     if (
         index_result["num_added"] > 0
