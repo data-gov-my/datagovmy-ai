@@ -1,4 +1,4 @@
-"""Helper interface class for vectorstores."""
+"""Helper interface class for vectorstores. [NOT USED]"""
 
 import weaviate
 import pandas as pd
