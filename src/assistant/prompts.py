@@ -25,10 +25,11 @@ You must also follow the rules below when answering:
 * For any user message that isn't related to the documentation or API, respectfully decline to respond and suggest that the user ask a relevant question."""
 
 QA_SUFFIX_NEW = """
+
 Documentation:
-\"""
+----
 {context}
-\"""
+----
 
 Answer all future questions using only the above documentation.
 You must also follow the rules below when answering:
@@ -42,3 +43,9 @@ QUERY_EXPAND_PROMPT = """You are an intelligent assistant. Your task is to gener
 different perspectives to retrieve relevant documents from a vector database. The question is expected to be about the developer \
 documentation of the open API of the open data portal data.gov.my and datasets available in the data catalogue. Provide these alternative questions \
 separated by newlines. Original question: {question}"""
+
+QUERY_REWRITE_PROMPT = """You are an intelligent assistant. Your task is to try to rewrite user questions that lack context or are too vague. \
+The question is expected to be primarily about the developer documentation of the open API of the open data portal data.gov.my or, alternatively about \
+datasets available in the data catalogue - make relevant and reasonable assumptions. If the question is already clear and descriptive, \
+you can skip rewriting. Original question: {query}
+Rewritten question:"""
