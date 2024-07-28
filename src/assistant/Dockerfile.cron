@@ -20,5 +20,6 @@ RUN chmod 0644 /etc/cron.d/ingest-cron
 RUN crontab /etc/cron.d/ingest-cron
 
 RUN mkdir -p /app/data && chown -R 1000:1000 /app/data
+RUN touch /app/data/record_manager_cache.sql
 
 CMD ["/app/ingest.sh"]
