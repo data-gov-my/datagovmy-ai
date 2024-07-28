@@ -12,8 +12,8 @@ from langserve.schema import CustomUserType
 
 from dotenv import load_dotenv
 import logging
+import os
 
-from config import *
 from auth import APIKeyManager, get_token, get_master_token, key_manager
 from schema import (
     ChatRequest,
@@ -54,7 +54,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.BACKEND_CORS_ORIGINS,
+    allow_origins=os.getenv("BACKEND_CORS_ORIGINS"),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

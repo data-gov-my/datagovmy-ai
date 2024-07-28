@@ -1,6 +1,6 @@
 ### Querying in Python
 
-The following code is an example of how to make an API query in python to retrieve data from the data catalogue endpoint. For a complete guide on possible query parameters and syntax, please refer to the [Request Query documentation](https://developer.data.gov.my/data-catalogue/request-query). Additionally, you can experiment with the code interactively and send requests at the [Example Requests section](https://developer.data.gov.my/data-catalogue/example-requests).
+The following code is an example of how to make an API query in python to retrieve data from the data catalogue endpoint. For a complete guide on possible query parameters and syntax, please refer to the [Request Query documentation](https://developer.data.gov.my/request-query).
 
 ```python
 import requests
@@ -14,7 +14,7 @@ pprint.pprint(response_json)
 
 ### Querying in JavaScript
 
-The following code is an example of how to make an API query in JavaScript to retrieve data from the data catalogue endpoint. For a complete guide on possible query parameters and syntax, please refer to the [Request Query documentation](https://developer.data.gov.my/data-catalogue/request-query). Additionally, you can experiment with the code interactively and send requests at the [Example Requests section](https://developer.data.gov.my/data-catalogue/example-requests).
+The following code is an example of how to make an API query in JavaScript to retrieve data from the data catalogue endpoint. For a complete guide on possible query parameters and syntax, please refer to the [Request Query documentation](https://developer.data.gov.my/request-query).
 
 ```javascript
 var requestOptions = {
@@ -22,7 +22,10 @@ var requestOptions = {
   redirect: "follow",
 };
 
-fetch("https://api.data.gov.my/data-catalogue?id=fuelprice&limit=3", requestOptions)
+fetch(
+  "https://api.data.gov.my/data-catalogue?id=fuelprice&limit=3",
+  requestOptions
+)
   .then((response) => response.json())
   .then((result) => console.log(result))
   .catch((error) => console.log("error", error));
@@ -30,7 +33,7 @@ fetch("https://api.data.gov.my/data-catalogue?id=fuelprice&limit=3", requestOpti
 
 ### Querying in Swift
 
-The following code is an example of how to make an API query in Swift to retrieve data from the data catalogue endpoint. For a complete guide on possible query parameters and syntax, please refer to the [Request Query documentation](https://developer.data.gov.my/data-catalogue/request-query). Additionally, you can experiment with the code interactively and send requests at the [Example Requests section](https://developer.data.gov.my/data-catalogue/example-requests).
+The following code is an example of how to make an API query in Swift to retrieve data from the data catalogue endpoint. For a complete guide on possible query parameters and syntax, please refer to the [Request Query documentation](https://developer.data.gov.my/request-query).
 
 ```swift
 import Foundation
@@ -55,7 +58,7 @@ task.resume()
 
 ### Querying in Dart
 
-The following code is an example of how to make an API query in Dart to retrieve data from the data catalogue endpoint. For a complete guide on possible query parameters and syntax, please refer to the [Request Query documentation](https://developer.data.gov.my/data-catalogue/request-query). Additionally, you can experiment with the code interactively and send requests at the [Example Requests section](https://developer.data.gov.my/data-catalogue/example-requests).
+The following code is an example of how to make an API query in Dart to retrieve data from the data catalogue endpoint. For a complete guide on possible query parameters and syntax, please refer to the [Request Query documentation](https://developer.data.gov.my/request-query).
 
 ```dart
 import 'package:http/http.dart' as http;
@@ -79,7 +82,7 @@ void main() async {
 
 ### Querying in Kotlin
 
-The following code is an example of how to make an API query in Kotlin to retrieve data from the data catalogue endpoint. For a complete guide on possible query parameters and syntax, please refer to the [Request Query documentation](https://developer.data.gov.my/data-catalogue/request-query). Additionally, you can experiment with the code interactively and send requests at the [Example Requests section](https://developer.data.gov.my/data-catalogue/example-requests).
+The following code is an example of how to make an API query in Kotlin to retrieve data from the data catalogue endpoint. For a complete guide on possible query parameters and syntax, please refer to the [Request Query documentation](https://developer.data.gov.my/request-query).
 
 ```kotlin
 import okhttp3.MediaType.Companion.toMediaType
@@ -102,7 +105,7 @@ println(response.body!!.string())
 
 ### Querying in Java
 
-The following code is an example of how to make an API query in Java to retrieve data from the data catalogue endpoint. For a complete guide on possible query parameters and syntax, please refer to the [Request Query documentation](https://developer.data.gov.my/data-catalogue/request-query). Additionally, you can experiment with the code interactively and send requests at the [Example Requests section](https://developer.data.gov.my/data-catalogue/example-requests).
+The following code is an example of how to make an API query in Java to retrieve data from the data catalogue endpoint. For a complete guide on possible query parameters and syntax, please refer to the [Request Query documentation](https://developer.data.gov.my/request-query).
 
 ```java
 import java.io.*;
