@@ -95,6 +95,7 @@ def load_mdx_docs() -> List:
 
 def run_index(docs, class_name):
     # connect to chroma db vectorstore
+    print("Connecting to Chroma DB at", os.getenv("CHROMA_HOST"))
     oai_embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
     client = chromadb.HttpClient(
         host=os.getenv("CHROMA_HOST"),
@@ -121,7 +122,11 @@ def run_index(docs, class_name):
         or index_result["num_updated"] > 0
         or index_result["num_deleted"] > 0
     ):
-        send_telegram(f"Vector index updated for {class_name}: {index_result}")
+        print(f"Vector index updated for {class_name}: {index_result}")
+        # send_telegram(f"Vector index updated for {class_name}: {index_result}")
+    else:
+        print("No changes in vector index")
+        # send_telegram("No changes in vector index")
 
 
 if __name__ == "__main__":
@@ -129,4 +134,5 @@ if __name__ == "__main__":
         mdx_docs = load_mdx_docs()
         run_index(mdx_docs, os.getenv("DOCS_VINDEX"))
     except Exception as e:
-        send_telegram(f"Error in docs ingest: {e}")
+        print(f"Error in docs ingest: {e}")
+        # send_telegram(f"Error in docs ingest: {e}")
