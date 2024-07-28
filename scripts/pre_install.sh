@@ -6,6 +6,7 @@ CD_INSTALL_TARGET=/home/ubuntu/datagovmy-ai
 DEPLOY_TEMP=/home/ubuntu/deploy-tmp
 DOCS_API_ROOT=${CD_INSTALL_TARGET}/src/assistant
 DOCS_API_ENV=${DOCS_API_ROOT}/.env
+REC_MGR_DATA_DIR=/home/ubuntu/datagovmy-ai/data/records
 
 # Ensure the AWS CLI is available
 if ! command -v aws &>/dev/null; then
@@ -46,7 +47,10 @@ done
 echo "Environment setup complete. .env file created at $DOCS_API_ENV"
 
 # Ensure record manager data directory exists
-sudo mkdir -p /home/ubuntu/data
-sudo chown -R 1000:1000 /home/ubuntu/data
+sudo mkdir -p $REC_MGR_DATA_DIR
+sudo chown -R 1000:1000 $REC_MGR_DATA_DIR
+if [ ! -f $DOCS_API_ENV ]; then
+    touch $REC_MGR_DATA_DIR/record_manager_cache.sql
+fi
 
 echo "[${DATESTAMP}] pre install step completed"
