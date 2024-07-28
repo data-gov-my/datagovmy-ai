@@ -1,0 +1,44 @@
+version: "3.8"
+services:
+  web:
+    build: src/assistant
+    command: python -m uvicorn app:app --host 0.0.0.0 --port 8001
+    volumes:
+      - ./src/assistant:/app
+    ports:
+      - 8005:8001
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - chroma
+
+  chroma:
+    image: ghcr.io/chroma-core/chroma:latest
+    volumes:
+      - index_data:/chroma/.chroma/index
+    ports:
+      - 8006:8000
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ALLOW_RESET=TRUE
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  ingest-cron:
+    build:
+      context: src/assistant
+      dockerfile: Dockerfile.cron
+    volumes:
+      - ./data/records:/app/data
+    env_file:
+      - .env
+    environment:
+      - REC_MGR_CONN_STR=sqlite:////app/data/record_manager_cache.sql
+    depends_on:
+      - chroma
+
+volumes:
+  index_data:
+    driver: local

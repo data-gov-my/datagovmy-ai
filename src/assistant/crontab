@@ -1,1 +1,1 @@
-0 * * * * /usr/local/bin/python /app/ingest.py >> /var/log/cron.log 2>&1
+* * * * * /usr/local/bin/python /app/ingest.py >> /var/log/cron.log 2>&1
