@@ -9,21 +9,20 @@ For docs AI:
 Downside is need to load and parse everything regardless.
 """
 
+import os
 import chromadb
 from chromadb.config import Settings
-from langchain_chroma import Chroma
 import requests
 import pandas as pd
+from typing import List
 from dotenv import load_dotenv
 
+from langchain_chroma import Chroma
 from langchain.indexes import SQLRecordManager, index
 from langchain.docstore.document import Document
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.vectorstores.weaviate import Weaviate
+from langchain_openai.embeddings import OpenAIEmbeddings
 
-from config import *
 from loaders import MdxLoader, DashboardMetaLoader, DCMetaLoader
-from vect import WeaviateVectorDB
 from utils.helpers import send_telegram
 
 load_dotenv()
@@ -61,7 +60,9 @@ def load_mdx_docs() -> List:
     # load mdx files from git
     mdx_loader = MdxLoader(
         get_github_mdx(
-            settings.GITHUB_REPO, settings.GITHUB_PATH, settings.GITHUB_TOKEN
+            os.getenv("GITHUB_REPO"),
+            os.getenv("GITHUB_PATH"),
+            os.getenv("GITHUB_TOKEN"),
         ),
         mdx_type="docs",
     )
@@ -69,14 +70,14 @@ def load_mdx_docs() -> List:
 
     # load local mdx files to augment
     mdx_local_loader = MdxLoader(
-        get_github_mdx("data-gov-my/datagovmy-ai", "data", settings.GITHUB_TOKEN),
+        get_github_mdx("data-gov-my/datagovmy-ai", "data", os.getenv("GITHUB_TOKEN")),
         mdx_type="local",
     )
     df_mdx_local = mdx_local_loader.load()
 
     # load DC metadata
     dc_meta_loader = DCMetaLoader(
-        [settings.DC_META_PARQUET, settings.DC_METAFIELDS_PARQUET]
+        [os.getenv("DC_META_PARQUET"), os.getenv("DC_METAFIELDS_PARQUET")]
     )
     df_dcmeta = dc_meta_loader.load()
 
@@ -95,6 +96,11 @@ def load_mdx_docs() -> List:
 def run_index(docs, class_name):
     # connect to chroma db vectorstore
     oai_embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+    client = chromadb.HttpClient(
+        host=os.getenv("CHROMA_HOST"),
+        port=os.getenv("CHROMA_PORT"),
+        settings=Settings(),
+    )
     chroma_db = Chroma(
         client=client,
         collection_name="dgmy_docs",
@@ -102,7 +108,7 @@ def run_index(docs, class_name):
     )
 
     # initialise record manager
-    conn_str = settings.REC_MGR_CONN_STR
+    conn_str = os.getenv("REC_MGR_CONN_STR")
     namespace = f"chroma/{class_name}"
     record_manager = SQLRecordManager(namespace, db_url=conn_str)
     record_manager.create_schema()
@@ -121,6 +127,6 @@ def run_index(docs, class_name):
 if __name__ == "__main__":
     try:
         mdx_docs = load_mdx_docs()
-        run_index(mdx_docs, settings.DOCS_VINDEX)
+        run_index(mdx_docs, os.getenv("DOCS_VINDEX"))
     except Exception as e:
         send_telegram(f"Error in docs ingest: {e}")

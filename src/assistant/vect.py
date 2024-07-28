@@ -9,8 +9,6 @@ from langchain.embeddings import OpenAIEmbeddings
 
 from langchain.vectorstores.weaviate import Weaviate
 
-from config import *
-
 
 class BaseVectorDB(Protocol):
     vectorstore: VectorStore

@@ -1,6 +1,6 @@
 from cryptography.fernet import Fernet
+import os
 
-from config import *
 from utils.cache import cache
 
 from fastapi import Depends, status, HTTPException
@@ -33,8 +33,8 @@ class APIKeyManager:
         await FastAPICache.clear(namespace="token")
 
     def get_key(self):
-        if settings.ENVIRONMENT == "dev":
-            return settings.MASTER_TOKEN_KEY
+        if os.getenv("ENVIRONMENT") == "dev":
+            return os.getenv("MASTER_TOKEN_KEY")
         try:
             with open(self.key_file_path, "r") as file:
                 api_key = file.read()
@@ -45,7 +45,7 @@ class APIKeyManager:
 
 
 key_manager = APIKeyManager(
-    key_file_path=settings.KEY_FILE, encryption_key=settings.ENCRYPT_KEY
+    key_file_path=os.getenv("KEY_FILE"), encryption_key=os.getenv("ENCRYPT_KEY")
 )
 
 
@@ -58,7 +58,7 @@ async def get_master_token(
     auth: HTTPAuthorizationCredentials = Depends(get_bearer_token),
 ) -> str:
     """Get master token for auth update endpoint."""
-    if auth is None or (token := auth.credentials) != settings.MASTER_TOKEN_KEY:
+    if auth is None or (token := auth.credentials) != os.getenv("MASTER_TOKEN_KEY"):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Bearer token missing or unknown",

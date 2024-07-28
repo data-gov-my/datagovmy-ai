@@ -6,28 +6,47 @@ CD_INSTALL_TARGET=/home/ubuntu/datagovmy-ai
 DEPLOY_TEMP=/home/ubuntu/deploy-tmp
 DOCS_API_ROOT=${CD_INSTALL_TARGET}/src/assistant
 DOCS_API_ENV=${DOCS_API_ROOT}/.env
-WEAVIATE_ENV=${DOCS_API_ROOT}/scripts/weaviate/.env
-BIN_FILE=${DOCS_API_ROOT}/key.bin
 
-# preserve .env files from previous deployment
-if [ -f ${DOCS_API_ENV} ]; then
-    echo "[${DATESTAMP}] preserving .env file"
-    cp ${DOCS_API_ENV} ${DEPLOY_TEMP}/main.env.bak
-fi
-if [ -f ${WEAVIATE_ENV} ]; then
-    echo "[${DATESTAMP}] preserving weaviate .env file"
-    cp ${WEAVIATE_ENV} ${DEPLOY_TEMP}/weaviate.env.bak
-fi
-if [ -f ${BIN_FILE} ]; then
-    echo "[${DATESTAMP}] preserving key file"
-    cp ${BIN_FILE} ${DEPLOY_TEMP}/key.bin
+# Ensure the AWS CLI is available
+if ! command -v aws &>/dev/null; then
+    echo "AWS CLI could not be found. Installing..."
+    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+    unzip awscliv2.zip
+    sudo ./aws/install
+    rm -rf aws awscliv2.zip
 fi
 
-# clear previous deployment if exists
-if [ -d ${CD_INSTALL_TARGET} ]; then
-    echo "[${DATESTAMP}] clearing previous deployment"
-    rm -rf ${CD_INSTALL_TARGET}
-    mkdir ${CD_INSTALL_TARGET}
-fi
+AWS_REGION="ap-southeast-1"
+
+echo "Fetching environment variables from AWS Parameter Store..."
+
+# Clear existing .env file or create if it doesn't exist
+>$DOCS_API_ENV
+
+# List of parameter names to fetch
+PARAMS=(
+    "/myapp/prod/DATABASE_URL"
+    "/myapp/prod/API_KEY"
+    "/myapp/prod/FASTAPI_ENV"
+    # Add more parameters as needed
+)
+
+for PARAM_NAME in "${PARAMS[@]}"; do
+    PARAM_VALUE=$(aws ssm get-parameter --name "$PARAM_NAME" --with-decryption --query "Parameter.Value" --output text --region $AWS_REGION)
+    if [ $? -eq 0 ]; then
+        # Extract the parameter name without the path
+        ENV_VAR_NAME=$(basename $PARAM_NAME)
+        echo "$ENV_VAR_NAME=$PARAM_VALUE" >>$ENV_FILE
+        echo "Added $ENV_VAR_NAME to .env file"
+    else
+        echo "Failed to fetch $PARAM_NAME"
+    fi
+done
+
+echo "Environment setup complete. .env file created at $DOCS_API_ENV"
+
+# Ensure record manager data directory exists
+sudo mkdir -p /home/ubuntu/data
+sudo chown -R 1000:1000 /home/ubuntu/data
 
 echo "[${DATESTAMP}] pre install step completed"

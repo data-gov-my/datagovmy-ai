@@ -1,11 +1,13 @@
 import json
+import os
 from typing import Any, Dict, List, Optional
 
 import chromadb
 from chromadb.config import Settings
 from langchain_openai.chat_models import ChatOpenAI
 from langchain_openai.embeddings import OpenAIEmbeddings
-from langchain.prompts.chat import (
+from langchain_core.prompts import PromptTemplate
+from langchain_core.prompts.chat import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
     MessagesPlaceholder,
@@ -32,7 +34,6 @@ from prompts import (
     QUERY_REWRITE_PROMPT,
 )
 from schema import *
-from config import *
 from utils.templates import CATALOGUE_ID_TEMPLATE, CATALOGUE_ID_NOAPI_TEMPLATE
 
 
@@ -93,7 +94,11 @@ def create_new_chain():
     )
 
     # init retriever
-    client = chromadb.HttpClient(settings=Settings(allow_reset=True))
+    client = chromadb.HttpClient(
+        host=os.getenv("CHROMA_HOST"),
+        port=os.getenv("CHROMA_PORT"),
+        settings=Settings(),
+    )
 
     db = Chroma(
         client=client,
@@ -112,7 +117,7 @@ def create_new_chain():
         | StrOutputParser()
         | (lambda x: x.split("\n"))
         | (lambda x: [q for q in x if q.strip()])  # remove empty strings
-    )
+    ).with_config({"run_name": "QueryExpand"})
 
     ensemble_retriever_obj = EnsembleRetriever(
         retrievers=[custom_docs_retriever], weights=[0.33, 0.33, 0.33]
@@ -127,9 +132,11 @@ def create_new_chain():
         | generate_queries
         | custom_docs_retriever.map()
         | apply_rrf
-    )
+    ).with_config({"run_name": "RetrievalChain"})
 
-    multi_query_retriever_chain = itemgetter("query") | retrieval_chain
+    multi_query_retriever_chain = (itemgetter("query") | retrieval_chain).with_config(
+        {"run_name": "MultiQueryRetriever"}
+    )
 
     # handle chat history - received from UI in list of messages
     def format_messages(input):
@@ -153,12 +160,12 @@ def create_new_chain():
     qa_chain = chat_prompt | llm | StrOutputParser()
 
     # query rewriting to handle low-context questions
-    query_rewrite_prompt = ChatPromptTemplate.from_template(QUERY_REWRITE_PROMPT)
+    query_rewrite_prompt = PromptTemplate.from_template(QUERY_REWRITE_PROMPT)
     query_rewrite_chain = (
         query_rewrite_prompt
         | ChatOpenAI(model="gpt-4o-mini", temperature=0.7)
         | StrOutputParser()
-    )
+    ).with_config({"run_name": "QueryRewrite"})
 
     rag_chain = (
         format_messages
@@ -170,6 +177,6 @@ def create_new_chain():
             }
         )
         | qa_chain
-    )
+    ).with_config({"run_name": "RAGChain"})
 
     return rag_chain

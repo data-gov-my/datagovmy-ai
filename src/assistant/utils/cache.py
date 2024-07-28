@@ -1,6 +1,5 @@
 from fastapi_cache.decorator import cache
-
-from config import *
+import os
 
 
 def nocache(*args, **kwargs):
@@ -10,7 +9,7 @@ def nocache(*args, **kwargs):
     return decorator
 
 
-if settings.ENVIRONMENT == "dev":
+if os.getenv("ENVIRONMENT") == "dev":
     # bypass cache in dev environment
     cache = nocache
 else:

@@ -1,9 +1,8 @@
 import re
+import os
 import ast
 from typing import List, Optional
 import requests
-
-from config import *
 
 
 # Text Utils
@@ -66,11 +65,13 @@ def send_telegram(message: str) -> None:
         chunks = [message]
     for chunk in chunks:
         params = {
-            "chat_id": settings.TELEGRAM_CHAT_ID,
+            "chat_id": os.getenv("TELEGRAM_CHAT_ID"),
             "text": chunk,
             "parse_mode": "HTML",
         }
-        tf_url = f"https://api.telegram.org/bot{settings.TELEGRAM_TOKEN}/sendMessage"
+        tf_url = (
+            f"https://api.telegram.org/bot{os.getenv('TELEGRAM_TOKEN')}/sendMessage"
+        )
         r = requests.get(url=tf_url, data=params)
 
 
