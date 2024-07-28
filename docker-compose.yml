@@ -12,7 +12,8 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
-      - chroma
+      chroma:
+        condition: service_healthy
 
   chroma:
     image: ghcr.io/chroma-core/chroma:latest
@@ -25,6 +26,12 @@ services:
       - ALLOW_RESET=TRUE
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    healthcheck:
+      test:
+        ["CMD", "/bin/bash", "-c", "cat < /dev/null > /dev/tcp/localhost/8000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   ingest-cron:
     build:
@@ -37,7 +44,8 @@ services:
     environment:
       - REC_MGR_CONN_STR=sqlite:////app/data/record_manager_cache.sql
     depends_on:
-      - chroma
+      chroma:
+        condition: service_healthy
 
 volumes:
   index_data:
