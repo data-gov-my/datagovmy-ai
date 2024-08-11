@@ -1,4 +1,3 @@
-version: "3.8"
 services:
   web:
     build: src/assistant
@@ -39,10 +38,9 @@ services:
       dockerfile: Dockerfile.cron
     volumes:
       - ./data/records:/app/data
+      - ./.env:/app/.env
     env_file:
       - .env
-    environment:
-      - REC_MGR_CONN_STR=sqlite:////app/data/record_manager_cache.sql
     depends_on:
       chroma:
         condition: service_healthy
