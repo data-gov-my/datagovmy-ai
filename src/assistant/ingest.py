@@ -27,6 +27,9 @@ from utils.helpers import send_telegram
 
 load_dotenv()
 
+print("GITHUB_REPO", os.getenv("GITHUB_REPO"))
+print("REC_MGR_CONN_STR", os.getenv("REC_MGR_CONN_STR"))
+
 DOCS_MDX_FIELDS = ["header", "source"]
 DASH_META_FIELDS = ["name", "description", "category", "agency", "source"]
 
