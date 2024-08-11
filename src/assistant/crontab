@@ -1,1 +1,1 @@
-* * * * * /app/ingest.sh >>/var/log/cron.log 2>&1
+* * * * * /app/scripts/ingest.sh >>/var/log/cron.log 2>&1

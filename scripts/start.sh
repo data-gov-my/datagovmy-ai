@@ -5,7 +5,7 @@ set -a
 source .env
 set +a
 
-docker-compose up -d --build
+docker-compose build --no-cache
 
 sudo systemctl restart ai-docs-api.service
 
