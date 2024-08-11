@@ -3,5 +3,5 @@ echo "Starting ingest script..."
 date
 source /app/.env
 printenv
-python /app/ingest.py
+/usr/local/bin/python /app/ingest.py
 echo "Ingest script completed."

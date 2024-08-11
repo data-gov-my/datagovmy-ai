@@ -6,7 +6,7 @@ on:
 jobs:
   continuous-deployment:
     runs-on: ubuntu-latest
-    if: github.ref_name == 'feat/refresh-rag-DISABLED'
+    if: github.ref_name == 'feat/refresh-rag'
     steps:
       # Step 1
       - name: Configure AWS credentials
@@ -25,11 +25,11 @@ jobs:
             --deployment-config-name CodeDeployDefault.OneAtATime \
             --github-location repository=${{ github.repository }},commitId=${{ github.sha }}
       # Step 3
-      - name: Send Telegram Notification
-        uses: appleboy/telegram-action@master
-        with:
-          to: ${{ secrets.TELEGRAM_CHAT_ID }}
-          token: ${{ secrets.TELEGRAM_TOKEN }}
-          message: |
-            Production Deployment: API
-            See changes: https://github.com/${{ github.repository }}/commit/${{github.sha}}
+      # - name: Send Telegram Notification
+      #   uses: appleboy/telegram-action@master
+      #   with:
+      #     to: ${{ secrets.TELEGRAM_CHAT_ID }}
+      #     token: ${{ secrets.TELEGRAM_TOKEN }}
+      #     message: |
+      #       Production Deployment: API
+      #       See changes: https://github.com/${{ github.repository }}/commit/${{github.sha}}

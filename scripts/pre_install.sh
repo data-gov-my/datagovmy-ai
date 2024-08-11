@@ -26,10 +26,22 @@ echo "Fetching environment variables from AWS Parameter Store..."
 
 # List of parameter names to fetch
 PARAMS=(
-    "/myapp/prod/DATABASE_URL"
-    "/myapp/prod/API_KEY"
-    "/myapp/prod/FASTAPI_ENV"
-    # Add more parameters as needed
+    "/datagovmy-ai/prod/CHROMA_HOST"
+    "/datagovmy-ai/prod/CHROMA_PORT",
+    "/datagovmy-ai/prod/DC_METAFIELDS_PARQUET",
+    "/datagovmy-ai/prod/DC_META_PARQUET",
+    "/datagovmy-ai/prod/DOCS_VINDEX",
+    "/datagovmy-ai/prod/ENVIRONMENT",
+    "/datagovmy-ai/prod/GITHUB_PATH",
+    "/datagovmy-ai/prod/GITHUB_REPO",
+    "/datagovmy-ai/prod/GITHUB_TOKEN",
+    "/datagovmy-ai/prod/KEY_FILE",
+    "/datagovmy-ai/prod/LANGCHAIN_API_KEY",
+    "/datagovmy-ai/prod/LANGCHAIN_ENDPOINT",
+    "/datagovmy-ai/prod/LANGCHAIN_PROJECT",
+    "/datagovmy-ai/prod/LANGCHAIN_TRACING_V2",
+    "/datagovmy-ai/prod/MASTER_TOKEN_KEY",
+    "/datagovmy-ai/prod/OPENAI_API_KEY",
 )
 
 for PARAM_NAME in "${PARAMS[@]}"; do
