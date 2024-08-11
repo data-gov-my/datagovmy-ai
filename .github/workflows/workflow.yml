@@ -6,7 +6,7 @@ on:
 jobs:
   continuous-deployment:
     runs-on: ubuntu-latest
-    if: github.ref_name == 'feat/refresh-rag'
+    if: github.ref_name == 'feat/refresh-rag-DISABLED'
     steps:
       # Step 1
       - name: Configure AWS credentials
@@ -20,8 +20,8 @@ jobs:
         id: deploy
         run: |
           aws deploy create-deployment \
-            --application-name ai-docs-api \
-            --deployment-group-name AiDocsApiGroup \
+            --application-name ai-docs-api-test \
+            --deployment-group-name ai-docs-api-test \
             --deployment-config-name CodeDeployDefault.OneAtATime \
             --github-location repository=${{ github.repository }},commitId=${{ github.sha }}
       # Step 3
