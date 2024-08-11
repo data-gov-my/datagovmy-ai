@@ -4,7 +4,7 @@
 #
 #    pip-compile --output-file=requirements/main.txt pyproject.toml
 #
-aiohttp==3.8.6
+aiohttp==3.9.4
     # via
     #   fastapi-cache2
     #   langchain
