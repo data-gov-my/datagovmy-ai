@@ -1,13 +1,15 @@
 [Unit]
 Description=AI Docs API Service
-After=multi-user.target
+Requires=docker.service
+After=docker.service
 
 [Service]
-Type=simple
-Restart=always
-EnvironmentFile=/home/ubuntu/datagovmy-ai/src/assistant/.env
-WorkingDirectory=/home/ubuntu/datagovmy-ai/src/assistant
-ExecStart=/home/ubuntu/datagovmy-ai/env/bin/uvicorn app:app --host $BACKEND_HOST --port $BACKEND_PORT
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/home/ubuntu/datagovmy-ai
+ExecStart=/usr/local/bin/docker-compose up -d
+ExecStop=/usr/local/bin/docker-compose down
+TimeoutStartSec=0
 
 [Install]
 WantedBy=multi-user.target
