@@ -3,9 +3,7 @@
 DATESTAMP="$(date +%FT%H:%m)"
 
 CD_INSTALL_TARGET=/home/ubuntu/datagovmy-ai
-DEPLOY_TEMP=/home/ubuntu/deploy-tmp
 DOCS_API_ROOT=${CD_INSTALL_TARGET}/src/assistant
-DOCS_API_ENV=${DOCS_API_ROOT}/.env
 
 # install services
 echo "[${DATESTAMP}] installing services"

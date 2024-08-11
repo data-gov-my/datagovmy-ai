@@ -4,15 +4,9 @@ RUN apt-get update && apt-get install -y cron
 
 WORKDIR /app
 
-# these paths are relative to src/assistant
-COPY ingest.py /app/ingest.py
-COPY config.py /app/config.py
-COPY loaders.py /app/loaders.py
-COPY utils /app/utils
-COPY requirements.txt /app/requirements.txt
+COPY . /app/
 
-COPY scripts/ingest.sh /app/ingest.sh
-RUN chmod +x /app/ingest.sh
+RUN chmod +x /app/scripts/ingest.sh
 
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -24,5 +18,4 @@ RUN touch /var/log/cron.log
 
 RUN mkdir -p /app/data && chown -R 1000:1000 /app/data
 
-# CMD ["/app/ingest.sh"]
 CMD cron && tail -f /var/log/cron.log
