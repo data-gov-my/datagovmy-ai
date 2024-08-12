@@ -60,7 +60,7 @@ done
 echo "Environment setup complete. .env file created at $DOCS_API_ENV"
 
 # Ensure record manager data directory exists
-sudo mkdir -p $REC_MGR_DATA_DIR
+mkdir -p $REC_MGR_DATA_DIR
 sudo chown -R 1000:1000 $REC_MGR_DATA_DIR
 if [ ! -f $DOCS_API_ENV ]; then
     touch $REC_MGR_DATA_DIR/record_manager_cache.sql

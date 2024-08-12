@@ -7,7 +7,7 @@ DOCS_API_ROOT=${CD_INSTALL_TARGET}/src/assistant
 
 # install services
 echo "[${DATESTAMP}] installing services"
-ln -s ${DOCS_API_ROOT}/config/*.service /etc/systemd/system/
-systemctl daemon-reload
+sudo ln -s ${DOCS_API_ROOT}/config/*.service /etc/systemd/system/
+sudo systemctl daemon-reload
 
 echo "[${DATESTAMP}] post install step completed"
