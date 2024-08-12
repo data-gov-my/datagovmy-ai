@@ -50,7 +50,7 @@ for PARAM_NAME in "${PARAMS[@]}"; do
     if [ $? -eq 0 ]; then
         # Extract the parameter name without the path
         ENV_VAR_NAME=$(basename $PARAM_NAME)
-        echo "$ENV_VAR_NAME=$PARAM_VALUE" >>$ENV_FILE
+        echo "$ENV_VAR_NAME=$PARAM_VALUE" >>$DOCS_API_ENV
         echo "Added $ENV_VAR_NAME to .env file"
     else
         echo "Failed to fetch $PARAM_NAME"
