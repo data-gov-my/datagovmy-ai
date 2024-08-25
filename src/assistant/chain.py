@@ -87,7 +87,7 @@ def create_new_chain():
     embedding_llm = OpenAIEmbeddings(model="text-embedding-3-small")
 
     llm = ChatOpenAI(
-        model="gpt-4o-mini",
+        model="gpt-4o",
         temperature=0,
         streaming=True,
         verbose=True,
@@ -134,9 +134,9 @@ def create_new_chain():
         | apply_rrf
     ).with_config({"run_name": "RetrievalChain"})
 
-    multi_query_retriever_chain = (itemgetter("query") | retrieval_chain).with_config(
-        {"run_name": "MultiQueryRetriever"}
-    )
+    multi_query_retriever_chain = (
+        itemgetter("query") | retrieval_chain.pick(["context"]) | itemgetter("context")
+    ).with_config({"run_name": "MultiQueryRetriever"})
 
     # handle chat history - received from UI in list of messages
     def format_messages(input):
