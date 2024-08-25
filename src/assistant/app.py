@@ -46,7 +46,7 @@ class NewChatReqest(CustomUserType):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    redis = aioredis.from_url("redis://")
+    redis = await aioredis.from_url("redis://host.docker.internal:6381")
     FastAPICache.init(RedisBackend(redis), prefix="")
     yield
 
@@ -66,6 +66,7 @@ add_routes(
     app,
     rag_chain,
     path="/chat",
+    dependencies=[Depends(get_token)],
 )
 
 
