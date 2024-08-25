@@ -43,6 +43,7 @@ PARAMS=(
     "/datagovmy-ai/prod/MASTER_TOKEN_KEY"
     "/datagovmy-ai/prod/OPENAI_API_KEY"
     "/datagovmy-ai/prod/REC_MGR_CONN_STR"
+    "/datagovmy-ai/prod/BACKEND_CORS_ORIGINS"
 )
 
 for PARAM_NAME in "${PARAMS[@]}"; do
