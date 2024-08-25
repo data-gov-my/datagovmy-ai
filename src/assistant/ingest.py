@@ -120,6 +120,7 @@ def run_index(docs, class_name):
     index_result = index(
         docs, record_manager, chroma_db, cleanup="full", source_id_key="source"
     )
+    print(f"Current index contains: {len(record_manager.list_keys())} records")
     if (
         index_result["num_added"] > 0
         or index_result["num_updated"] > 0
