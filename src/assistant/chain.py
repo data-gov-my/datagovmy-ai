@@ -130,8 +130,12 @@ def create_new_chain():
     retrieval_chain = (
         {"query": RunnablePassthrough()}
         | generate_queries
-        | custom_docs_retriever.map()
-        | apply_rrf
+        | RunnableParallel(
+            {
+                "queries": RunnablePassthrough(),
+                "context": custom_docs_retriever.map() | apply_rrf,
+            }
+        )
     ).with_config({"run_name": "RetrievalChain"})
 
     multi_query_retriever_chain = (
