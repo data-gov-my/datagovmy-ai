@@ -6,7 +6,7 @@ CD_INSTALL_TARGET=/home/ubuntu/datagovmy-ai
 DEPLOY_TEMP=/home/ubuntu/deploy-tmp
 DOCS_API_ROOT=${CD_INSTALL_TARGET}/src/assistant
 DOCS_API_ENV=${CD_INSTALL_TARGET}/.env
-REC_MGR_DATA_DIR=/home/ubuntu/datagovmy-ai/data/records
+REC_MGR_DATA_DIR=/home/ubuntu/records
 
 # Ensure the AWS CLI is available
 if ! command -v aws &>/dev/null; then
