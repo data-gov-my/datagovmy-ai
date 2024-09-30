@@ -14,6 +14,14 @@ services:
       chroma:
         condition: service_healthy
 
+  redis:
+    image: redis:latest
+    ports:
+      - 6381:6379
+    restart: always
+    volumes:
+      - ./redis:/var/lib/redis
+
   chroma:
     image: ghcr.io/chroma-core/chroma:latest
     volumes:
