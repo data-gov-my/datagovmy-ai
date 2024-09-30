@@ -46,7 +46,6 @@ services:
       dockerfile: Dockerfile.cron
     volumes:
       - ./data/records:/app/data
-      - ./.env:/app/.env
     env_file:
       - .env
     extra_hosts:
