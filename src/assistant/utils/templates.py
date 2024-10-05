@@ -8,7 +8,7 @@ GET https://api.data.gov.my/data-catalogue?id={id}
 ```
 
 More information about this dataset:
-Dataset page: https://data.gov.my/data-catalogue/{dc_page_id}
+Dataset page: https://data.gov.my/data-catalogue/{id}
 {description} {data_methodology} It is updated on a {update_frequency} basis.
 {data_caveat}
 
