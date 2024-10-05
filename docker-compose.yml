@@ -45,7 +45,6 @@ services:
       context: src/assistant
       dockerfile: Dockerfile.cron
     volumes:
-      # - ./data/records:/app/data
       - ./.env:/app/.env
     env_file:
       - .env
