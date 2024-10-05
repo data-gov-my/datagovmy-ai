@@ -1,12 +1,12 @@
 name: CI/CD Pipeline
 on:
   push:
-    branches: [feat/refresh-rag]
+    branches: [main]
 
 jobs:
   continuous-deployment:
     runs-on: ubuntu-latest
-    if: github.ref_name == 'feat/refresh-rag'
+    if: github.ref_name == 'main'
     steps:
       # Step 1
       - name: Configure AWS credentials
