@@ -2,15 +2,21 @@ from langchain.text_splitter import (
     MarkdownHeaderTextSplitter,
     RecursiveCharacterTextSplitter,
 )
-
+import re
+import os
 import uuid
 import json
+import requests
 import pandas as pd
 from pathlib import Path
 from typing import Protocol, List
 
-from utils.helpers import *
-from config import *
+from utils.helpers import (
+    read_file_from_repo,
+    extract_line_without_hash,
+    clean_content,
+    parse_desc,
+)
 
 
 class BaseLoader(Protocol):
@@ -48,7 +54,7 @@ class MdxLoader(BaseLoader):
         all_splitted_text = []
         for mdx_file_url in self.sources:
             markdown_input = read_file_from_repo(
-                settings.GITHUB_REPO, settings.GITHUB_TOKEN, mdx_file_url
+                os.getenv("GITHUB_REPO"), os.getenv("GITHUB_TOKEN"), mdx_file_url
             )
 
             # clean raw input for certain corner cases
@@ -115,6 +121,7 @@ class MdxLoader(BaseLoader):
         to_exclude_header_source = [
             ("Example Request", "static-api/opendosm.en.mdx"),
             ("Request Query & Response Format", "static-api/opendosm.en.mdx"),
+            ("How to Find Available Resources", "static-api/opendosm.en.mdx"),
         ]
 
         dfm = dfm[~dfm.header.isin(to_exclude_headers)]
@@ -198,7 +205,7 @@ class DCMetaLoader(BaseLoader):
         dfmeta = pd.read_parquet(meta_file)
         dfmeta_fields = pd.read_parquet(metafields_file)
         dfmeta = dfmeta.merge(dfmeta_fields, on="id", suffixes=["", "_fields"])
-        dfmeta = dfmeta[~dfmeta.exclude_openapi]
+        # dfmeta = dfmeta[~dfmeta.exclude_openapi]
         # dc_page_id is now id
 
         # parse column desc to extract datatype and descriptions
@@ -270,7 +277,7 @@ class DCMetaLoader(BaseLoader):
             "var_name",  # machine name, we only need descriptive english - subcategory
             "col_data_type",
             "col_description",
-            "exclude_openapi",
+            # "exclude_openapi",
             "var_title_en",  # for columns meta
             "var_description_en",  # for columns meta
         ]
@@ -310,6 +317,7 @@ class DCMetaLoader(BaseLoader):
             "update_frequency",
             "data_source",
             "data_caveat",
+            "exclude_openapi",
             "id",
         ]
         dfmeta_byfile["header"] = dfmeta_byfile[metacols_for_header].to_dict(

@@ -3,6 +3,7 @@ os: linux
 files:
   - source: .
     destination: /home/ubuntu/datagovmy-ai
+file_exists_behavior: OVERWRITE
 hooks:
   # This deployment lifecycle event occurs even before the application revision
   # is downloaded. You can specify scripts for this event to gracefully stop the
@@ -26,7 +27,7 @@ hooks:
   AfterInstall:
     - location: scripts/post_install.sh
       timeout: 300
-      runas: root
+      runas: ubuntu
 
   # You typically use this deployment lifecycle event to restart services that
   # were stopped during ApplicationStop

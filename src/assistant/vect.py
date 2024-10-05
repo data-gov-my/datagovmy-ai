@@ -1,4 +1,4 @@
-"""Helper interface class for vectorstores."""
+"""Helper interface class for vectorstores. [NOT USED]"""
 
 import weaviate
 import pandas as pd
@@ -8,8 +8,6 @@ from langchain.vectorstores import VectorStore
 from langchain.embeddings import OpenAIEmbeddings
 
 from langchain.vectorstores.weaviate import Weaviate
-
-from config import *
 
 
 class BaseVectorDB(Protocol):
