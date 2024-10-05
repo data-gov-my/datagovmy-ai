@@ -111,7 +111,7 @@ def create_new_chain():
     query_expand_prompt = ChatPromptTemplate.from_template(QUERY_EXPAND_PROMPT)
 
     generate_queries = (
-        {"question": RunnablePassthrough()}
+        RunnablePassthrough()
         | query_expand_prompt
         | ChatOpenAI(model="gpt-4o-mini", temperature=0.7)
         | StrOutputParser()
@@ -164,7 +164,13 @@ def create_new_chain():
     qa_chain = chat_prompt | llm | StrOutputParser()
 
     # query rewriting to handle low-context questions
-    query_rewrite_prompt = PromptTemplate.from_template(QUERY_REWRITE_PROMPT)
+    query_rewrite_prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", QUERY_REWRITE_PROMPT),
+            MessagesPlaceholder(variable_name="history"),
+            ("user", "User question: {query}"),
+        ]
+    )
     query_rewrite_chain = (
         query_rewrite_prompt
         | ChatOpenAI(model="gpt-4o-mini", temperature=0.7)

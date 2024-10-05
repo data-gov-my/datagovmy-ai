@@ -23,15 +23,12 @@ You must also follow the rules below when answering:
 QUERY_EXPAND_PROMPT = """You are an intelligent assistant. Your task is to generate 3 questions based on the provided question in different wording and \
 different perspectives to retrieve relevant documents from a vector database. The question is expected to be about the developer \
 documentation of the open API of the open data portal data.gov.my and datasets available in the data catalogue. Provide these alternative questions \
-separated by newlines. Original question: {question}"""
+separated by newlines. Original question: {query}"""
 
-QUERY_REWRITE_PROMPT = """Given the original user question below, your task is to try to rewrite user questions that lack context or are too vague. \
+QUERY_REWRITE_PROMPT = """Given the conversation history and the original user question below, your task is to try to rewrite user questions that lack context or are too vague. \
 The question is expected to be primarily about the developer documentation of the open API of the open data portal data.gov.my or, alternatively about \
 datasets available in the data catalogue - make relevant and reasonable assumptions. Only rewrite when required, otherwise return the original question.
 
 * If the question is already clear and descriptive, do not rewrite.
 * If the question is in the form of a greeting or a thank you, do not rewrite.
-* If the question is an acknowledgement or a statement (eg. ok, alright, noted, etc), do not rewrite.
-
-Original question: {query}
-Rewritten question:"""
+* If the question is an acknowledgement or a statement (eg. ok, alright, noted, etc), do not rewrite."""
