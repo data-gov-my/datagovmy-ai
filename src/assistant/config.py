@@ -11,16 +11,16 @@ class AppEnvironment(str, Enum):
     PRODUCTION = "prod"
 
 
-class Settings(BaseSettings, extra="allow"):
+class AppSettings(BaseSettings, extra="allow"):
     ENVIRONMENT: str = Field(AppEnvironment.DEV, env="ENVIRONMENT")
     BACKEND_CORS_ORIGINS: List[str] = Field(..., env="BACKEND_CORS_ORIGINS")
-    APP_ROOT_PATH: str = Field(..., env="APP_ROOT_PATH")
+    # APP_ROOT_PATH: str = Field(..., env="APP_ROOT_PATH")
     MASTER_TOKEN_KEY: str = Field(..., env="MASTER_TOKEN_KEY")
 
     OPENAI_API_KEY: str = Field(..., env="OPENAI_API_KEY")
     OPENAI_ORG_ID: str = Field(..., env="OPENAI_ORG_ID")
-    WEAVIATE_URL: str = Field(..., env="WEAVIATE_URL")
-    VECT_ROOT_PATH: str = Field(..., env="VECT_ROOT_PATH")
+    # WEAVIATE_URL: str = Field(..., env="WEAVIATE_URL")
+    # VECT_ROOT_PATH: str = Field(..., env="VECT_ROOT_PATH")
     REC_MGR_CONN_STR: str = Field(..., env="REC_MGR_CONN_STR")
     DOCS_VINDEX: str = Field(..., env="DOCS_VINDEX")
     DC_META_VINDEX: str = Field(..., env="DC_META_VINDEX")
@@ -63,4 +63,4 @@ class Settings(BaseSettings, extra="allow"):
         raise ValueError(v)
 
 
-settings = Settings()
+settings = AppSettings()

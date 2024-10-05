@@ -1,0 +1,59 @@
+services:
+  web:
+    build: src/assistant
+    command: python -m uvicorn app:app --host 0.0.0.0 --port 8001
+    volumes:
+      - ./src/assistant:/app
+    ports:
+      - 8005:8001
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      chroma:
+        condition: service_healthy
+
+  redis:
+    image: redis:latest
+    ports:
+      - 6381:6379
+    restart: always
+    volumes:
+      - ./redis:/var/lib/redis
+
+  chroma:
+    image: ghcr.io/chroma-core/chroma:latest
+    volumes:
+      - index_data:/chroma/.chroma/index
+    ports:
+      - 8006:8000
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ALLOW_RESET=TRUE
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test:
+        ["CMD", "/bin/bash", "-c", "cat < /dev/null > /dev/tcp/localhost/8000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  ingest-cron:
+    build:
+      context: src/assistant
+      dockerfile: Dockerfile.cron
+    volumes:
+      - ./.env:/app/.env
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      chroma:
+        condition: service_healthy
+
+volumes:
+  index_data:
+    driver: local
