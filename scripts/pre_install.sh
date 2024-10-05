@@ -62,9 +62,12 @@ echo "Environment setup complete. .env file created at $DOCS_API_ENV"
 
 # Ensure record manager data directory exists
 mkdir -p $REC_MGR_DATA_DIR
-sudo chown -R 1000:1000 $REC_MGR_DATA_DIR
-if [ ! -f $DOCS_API_ENV ]; then
+sudo chown -R ubuntu:ubuntu $REC_MGR_DATA_DIR
+
+# Create record manager cache file if it doesn't exist
+if [ ! -f "$REC_MGR_DATA_DIR/record_manager_cache.sql" ]; then
     touch $REC_MGR_DATA_DIR/record_manager_cache.sql
+    sudo chown ubuntu:ubuntu $REC_MGR_DATA_DIR/record_manager_cache.sql
 fi
 
 echo "[${DATESTAMP}] pre install step completed"
