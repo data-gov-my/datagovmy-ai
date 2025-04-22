@@ -87,7 +87,7 @@ def create_new_chain():
     embedding_llm = OpenAIEmbeddings(model="text-embedding-3-small")
 
     llm = ChatOpenAI(
-        model="gpt-4o",
+        model="gpt-4.1",
         temperature=0,
         streaming=True,
         verbose=True,
@@ -113,7 +113,7 @@ def create_new_chain():
     generate_queries = (
         RunnablePassthrough()
         | query_expand_prompt
-        | ChatOpenAI(model="gpt-4o-mini", temperature=0.7)
+        | ChatOpenAI(model="gpt-4.1-mini", temperature=0.7)
         | StrOutputParser()
         | (lambda x: x.split("\n"))
         | (lambda x: [q for q in x if q.strip()])  # remove empty strings
@@ -173,7 +173,7 @@ def create_new_chain():
     )
     query_rewrite_chain = (
         query_rewrite_prompt
-        | ChatOpenAI(model="gpt-4o-mini", temperature=0.7)
+        | ChatOpenAI(model="gpt-4.1-mini", temperature=0.7)
         | StrOutputParser()
     ).with_config({"run_name": "QueryRewrite"})
 

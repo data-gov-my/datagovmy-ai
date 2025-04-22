@@ -25,7 +25,7 @@ Click on the link of the respective projects to find out how to set them up for 
 
 ### Open API Documentation Assistant 👨‍💻
 
-Built to assist developers in getting started with using the data.gov.my open API. The docs assistant is a Retrieval Augmented Generation (RAG) application powered by OpenAI's `gpt-4o` (Updated from `gpt-3.5-turbo` in Oct 2024) model. Its data pipeline indexes `.mdx` files from the [API documentation](https://developer.data.gov.my/) in the [datagovmy-front](https://github.com/data-gov-my/datagovmy-front) repository and stores embeddings in a Weaviate vectorstore for retrieval.
+Built to assist developers in getting started with using the data.gov.my open API. The docs assistant is a Retrieval Augmented Generation (RAG) application powered by OpenAI's `gpt-4.1` family of models. Its data pipeline indexes `.mdx` files from the [API documentation](https://developer.data.gov.my/) in the [datagovmy-front](https://github.com/data-gov-my/datagovmy-front) repository and stores embeddings in a Weaviate vectorstore for retrieval.
 
 ### MyDataGPT Assistant (Coming Soon!) 📈
 
