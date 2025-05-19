@@ -14,6 +14,6 @@ fastapi-cache2[redis]
 uvicorn
 pydantic-settings
 langserve
-chromadb==0.5.3
+chromadb==1.0.9
 opentelemetry-exporter-otlp-proto-grpc==1.25.0
 sse_starlette

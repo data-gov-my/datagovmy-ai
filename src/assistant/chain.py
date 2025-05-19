@@ -124,7 +124,25 @@ def create_new_chain():
     )
 
     def apply_rrf(docs: List[List[Document]]):
-        ranked_docs = ensemble_retriever_obj.weighted_reciprocal_rank(docs)
+        num_expected_lists = len(ensemble_retriever_obj.weights)
+
+        processed_docs = list(docs)
+        current_num_lists = len(processed_docs)
+
+        if current_num_lists < num_expected_lists:
+            # pad with empty lists if fewer lists are provided than expected
+            processed_docs.extend(
+                [[] for _ in range(num_expected_lists - current_num_lists)]
+            )
+        elif current_num_lists > num_expected_lists:
+            # truncate if more lists are provided than expected
+            processed_docs = processed_docs[:num_expected_lists]
+
+        # if all document lists are empty, return an empty string
+        if not processed_docs or not any(processed_docs):
+            return ""
+
+        ranked_docs = ensemble_retriever_obj.weighted_reciprocal_rank(processed_docs)
         return "\n\n".join([doc.page_content for doc in ranked_docs])
 
     retrieval_chain = (
