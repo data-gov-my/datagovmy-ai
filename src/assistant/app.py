@@ -17,11 +17,13 @@ import os
 from auth import APIKeyManager, get_token, get_master_token, key_manager
 from schema import (
     ChatRequest,
+    GenerateMetaRequest,
     HealthCheck,
     TokenUpdate,
     TokenUpdateResponse,
     ChainType,
     Message,
+    GenerateMetaResponse,
 )
 from chain import create_new_chain
 
@@ -68,6 +70,14 @@ add_routes(
     path="/chat",
     dependencies=[Depends(get_token)],
 )
+
+
+@app.post("/generate-meta", response_model=GenerateMetaResponse)
+def generate_meta(payload: GenerateMetaRequest):
+    input_data = payload.input_data
+    input_data["title_en"] = input_data["title_en"] + " (AI modified)"
+    input_data["description_en"] = input_data["description_en"] + " (AI modified)"
+    return GenerateMetaResponse(metadata=input_data)
 
 
 @app.get("/health", response_model=HealthCheck)

@@ -35,3 +35,11 @@ class TokenUpdate(BaseModel):
 
 class TokenUpdateResponse(BaseModel):
     message: str
+
+
+class GenerateMetaRequest(BaseModel):
+    input_data: dict
+
+
+class GenerateMetaResponse(BaseModel):
+    metadata: dict
