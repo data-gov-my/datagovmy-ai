@@ -10,6 +10,8 @@ from redis import asyncio as aioredis
 from langserve import add_routes
 from langserve.schema import CustomUserType
 
+from langchain_core.runnables import RunnableConfig
+
 from dotenv import load_dotenv
 import logging
 import os
@@ -26,6 +28,7 @@ from schema import (
     GenerateMetaResponse,
 )
 from chain import create_new_chain
+from generate_meta import build_generate_meta_graph
 
 load_dotenv()
 
@@ -63,6 +66,7 @@ app.add_middleware(
 )
 
 rag_chain = create_new_chain()
+generate_meta_graph = build_generate_meta_graph()
 
 add_routes(
     app,
@@ -74,10 +78,12 @@ add_routes(
 
 @app.post("/generate-meta", response_model=GenerateMetaResponse)
 def generate_meta(payload: GenerateMetaRequest):
+    config = RunnableConfig(
+        metadata={"langsmith_project": os.getenv("LANGCHAIN_PROJECT_GENMETA")},
+    )
     input_data = payload.input_data
-    input_data["title_en"] = input_data["title_en"] + " (AI modified)"
-    input_data["description_en"] = input_data["description_en"] + " (AI modified)"
-    return GenerateMetaResponse(metadata=input_data)
+    res = generate_meta_graph.invoke({"input_data": input_data}, config=config)
+    return GenerateMetaResponse(metadata=res["answer"])
 
 
 @app.get("/health", response_model=HealthCheck)

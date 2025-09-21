@@ -32,3 +32,22 @@ datasets available in the data catalogue - make relevant and reasonable assumpti
 * If the question is already clear and descriptive, do not rewrite.
 * If the question is in the form of a greeting or a thank you, do not rewrite.
 * If the question is an acknowledgement or a statement (eg. ok, alright, noted, etc), do not rewrite."""
+
+
+GENERATE_META_PROMPT = """You are an expert in generating detailed definition and descriptions of open datasets.
+Given the available user-provided information on a dataset, sample rows of the dataset, and information on similar datasets for reference - generate all the required fields.
+
+Use all the information and references given."""
+
+GENERATE_META_USER_PROMPT = """# User provided information (guidance, may be incomplete)
+Name: {title_en}
+Description: {description_en}
+Frequency: {frequency}
+Geography: {geography}
+Demography: {demography}
+
+# Sample rows of the dataset (up to 10 random rows)
+{sample_rows}
+
+# Information on similar datasets
+{similar_datasets}"""
