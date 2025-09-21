@@ -116,9 +116,9 @@ def build_generate_meta_graph():
             {
                 "title_en": input_data["title_en"],
                 "description_en": input_data["description_en"],
-                "frequency": input_data["frequency"],
-                "geography": input_data["geography"],
-                "demography": input_data["demography"],
+                "frequency": input_data.get("frequency", ""),
+                "geography": input_data.get("geography", ""),
+                "demography": input_data.get("demography", ""),
                 "sample_rows": sample_rows,
                 "similar_datasets": similar_datasets,
             }
@@ -131,3 +131,12 @@ def build_generate_meta_graph():
     graph_builder.add_edge(START, "retrieve")
     graph = graph_builder.compile()
     return graph
+
+
+def build_translation_keys(dataset_meta: DatasetMetadata):
+    trans_en = {}
+    trans_ms = {}
+    for field in dataset_meta.fields:
+        trans_en[field.name] = field.title_en
+        trans_ms[field.name] = field.title_ms
+    return trans_en, trans_ms
