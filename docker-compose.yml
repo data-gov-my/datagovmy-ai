@@ -23,7 +23,7 @@ services:
       - ./redis:/var/lib/redis
 
   chroma:
-    image: ghcr.io/chroma-core/chroma:latest
+    image: ghcr.io/chroma-core/chroma:1.1.0
     volumes:
       - index_data:/chroma/.chroma/index
     ports:

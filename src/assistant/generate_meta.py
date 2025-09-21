@@ -33,7 +33,8 @@ class DCMetaRetriever(BaseRetriever):
         page_content = f"""Dataset: {dc_meta["id"]}
 Description: {dc_meta["description"]}
 Methodology: {dc_meta["data_methodology"]}
-Caveat: {dc_meta["data_caveat"]}"""
+Caveat: {dc_meta["data_caveat"]}
+Data Fields: {dc_meta["col_meta_clean"]}"""
         return page_content
 
     def _get_relevant_documents(self, query):
@@ -59,7 +60,7 @@ Caveat: {dc_meta["data_caveat"]}"""
 def build_generate_meta_graph():
     llm = ChatOpenAI(
         model="gpt-4o",
-        temperature=0,
+        temperature=0.5,
         streaming=True,
         verbose=True,
     )

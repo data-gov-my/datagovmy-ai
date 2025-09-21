@@ -135,8 +135,17 @@ def run_index(docs, class_name):
 
 if __name__ == "__main__":
     try:
+        print("Loading MDX documents...")
         mdx_docs = load_mdx_docs()
+        print(f"Loaded {len(mdx_docs)} documents")
+
+        print("Running index...")
         run_index(mdx_docs, os.getenv("DOCS_VINDEX"))
+        print("Index completed successfully")
     except Exception as e:
         print(f"Error in docs ingest: {e}")
+        import traceback
+
+        traceback.print_exc()
         # send_telegram(f"Error in docs ingest: {e}")
+        exit(1)
