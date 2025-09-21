@@ -1,6 +1,7 @@
 from enum import StrEnum
-from pydantic import BaseModel, constr, Field
+from pydantic import BaseModel, constr, Field, ConfigDict
 from typing_extensions import List, TypedDict
+from typing import Optional, Dict
 from langchain.schema import Document
 
 
@@ -58,6 +59,8 @@ class DatasetMetadata(BaseModel):
     caveat_en: str = Field(description="The caveats of the dataset in English")
     caveat_ms: str = Field(description="The caveats of the dataset in Malay")
     fields: list[FieldMetadata] = Field(description="The fields of the dataset")
+    translations_en: Optional[Dict[str, str]] = Field(description="To be ignored")
+    translations_ms: Optional[Dict[str, str]] = Field(description="To be ignored")
 
 
 class State(TypedDict):
