@@ -65,9 +65,9 @@ mkdir -p $REC_MGR_DATA_DIR
 sudo chown -R ubuntu:ubuntu $REC_MGR_DATA_DIR
 
 # Create record manager cache file if it doesn't exist
-if [ ! -f "$REC_MGR_DATA_DIR/record_manager_cache.sql" ]; then
-    touch $REC_MGR_DATA_DIR/record_manager_cache.sql
-    sudo chown ubuntu:ubuntu $REC_MGR_DATA_DIR/record_manager_cache.sql
+if [ ! -f "$REC_MGR_DATA_DIR/record_manager.sql" ]; then
+    touch $REC_MGR_DATA_DIR/record_manager.sql
+    sudo chown ubuntu:ubuntu $REC_MGR_DATA_DIR/record_manager.sql
 fi
 
 echo "[${DATESTAMP}] pre install step completed"

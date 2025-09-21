@@ -87,16 +87,16 @@ def build_generate_meta_graph():
     )
     dc_meta_retriever = DCMetaRetriever(vectorstore=db)
 
-    def retrieve(state: State):
+    async def retrieve(state: State):
         print("retrieve")
         input_data = state["input_data"]
         query_string = f"{input_data['title_en']} {input_data['description_en']}"
-        retrieved_docs = dc_meta_retriever.invoke(
+        retrieved_docs = await dc_meta_retriever.ainvoke(
             query_string, kwargs={"filter": {"source": "dc_meta"}}
         )
         return {"similar_datasets": retrieved_docs}
 
-    def generate(state: State):
+    async def generate(state: State):
         print("generate")
         input_data = state["input_data"]
         similar_datasets = "\n\n".join(
@@ -112,7 +112,7 @@ def build_generate_meta_graph():
             sample_rows = ""
 
         chain = prompt | llm.with_structured_output(DatasetMetadata)
-        res = chain.invoke(
+        res = await chain.ainvoke(
             {
                 "title_en": input_data["title_en"],
                 "description_en": input_data["description_en"],
