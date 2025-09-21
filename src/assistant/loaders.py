@@ -215,7 +215,7 @@ class DCMetaLoader(BaseLoader):
 
         # group column metadata in different formats
         dfmeta_byfile = dfmeta.groupby("id").first()
-        dfmeta_byfile["col_meta"] = dfmeta.groupby("id").apply(
+        dfmeta_byfile["col_meta"] = dfmeta.groupby("id", include_groups=False).apply(
             lambda group_df: "\n".join(
                 group_df.apply(
                     lambda row: row.var_title_en.strip()
@@ -225,7 +225,9 @@ class DCMetaLoader(BaseLoader):
                 )
             )
         )
-        dfmeta_byfile["col_meta_clean"] = dfmeta.groupby("id").apply(
+        dfmeta_byfile["col_meta_clean"] = dfmeta.groupby(
+            "id", include_groups=False
+        ).apply(
             lambda group_df: " ".join(
                 group_df.apply(
                     lambda row: row.var_title_en.strip()
@@ -235,7 +237,9 @@ class DCMetaLoader(BaseLoader):
                 )
             )
         )
-        dfmeta_byfile["col_meta_dict"] = dfmeta.groupby("id").apply(
+        dfmeta_byfile["col_meta_dict"] = dfmeta.groupby(
+            "id", include_groups=False
+        ).apply(
             lambda group_df: group_df[
                 ["var_name", "col_data_type", "col_description"]
             ].to_dict(orient="records")
@@ -318,7 +322,6 @@ class DCMetaLoader(BaseLoader):
             "data_source",
             "data_caveat",
             "exclude_openapi",
-            "id",
             "col_meta_clean",
         ]
         dfmeta_byfile["header"] = dfmeta_byfile[metacols_for_header].to_dict(
