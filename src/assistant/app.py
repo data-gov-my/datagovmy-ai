@@ -77,12 +77,12 @@ add_routes(
 
 
 @app.post("/generate-meta", response_model=GenerateMetaResponse)
-def generate_meta(payload: GenerateMetaRequest):
+async def generate_meta(payload: GenerateMetaRequest):
     config = RunnableConfig(
         metadata={"langsmith_project": os.getenv("LANGCHAIN_PROJECT_GENMETA")},
     )
     input_data = payload.input_data
-    res = generate_meta_graph.invoke({"input_data": input_data}, config=config)
+    res = await generate_meta_graph.ainvoke({"input_data": input_data}, config=config)
     return GenerateMetaResponse(metadata=res["answer"])
 
 
