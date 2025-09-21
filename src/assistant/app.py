@@ -26,9 +26,10 @@ from schema import (
     ChainType,
     Message,
     GenerateMetaResponse,
+    DatasetMetadata,
 )
 from chain import create_new_chain
-from generate_meta import build_generate_meta_graph
+from generate_meta import build_generate_meta_graph, build_translation_keys
 
 load_dotenv()
 
@@ -83,7 +84,14 @@ async def generate_meta(payload: GenerateMetaRequest):
     )
     input_data = payload.input_data
     res = await generate_meta_graph.ainvoke({"input_data": input_data}, config=config)
-    return GenerateMetaResponse(metadata=res["answer"])
+    dataset_meta = res["answer"]
+    # post process - build translation keys
+    trans_en, trans_ms = build_translation_keys(dataset_meta)
+    dataset_meta.translations_en = trans_en
+    dataset_meta.translations_ms = trans_ms
+    return GenerateMetaResponse(
+        metadata=dataset_meta,
+    )
 
 
 @app.get("/health", response_model=HealthCheck)
