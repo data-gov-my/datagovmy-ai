@@ -55,8 +55,8 @@ class DatasetMetadata(BaseModel):
     description_ms: str = Field(description="The description of the dataset in Malay")
     methodology_en: str = Field(description="The methodology of the dataset in English")
     methodology_ms: str = Field(description="The methodology of the dataset in Malay")
-    caveats_en: str = Field(description="The caveats of the dataset in English")
-    caveats_ms: str = Field(description="The caveats of the dataset in Malay")
+    caveat_en: str = Field(description="The caveats of the dataset in English")
+    caveat_ms: str = Field(description="The caveats of the dataset in Malay")
     fields: list[FieldMetadata] = Field(description="The fields of the dataset")
 
 

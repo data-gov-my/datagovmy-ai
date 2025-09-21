@@ -46,8 +46,8 @@ Frequency: {frequency}
 Geography: {geography}
 Demography: {demography}
 
-# Sample rows of the dataset (up to 10 random rows)
+# Sample rows of the dataset (10 random rows)
 {sample_rows}
 
-# Information on similar datasets
+# References from similar datasets
 {similar_datasets}"""
