@@ -319,6 +319,7 @@ class DCMetaLoader(BaseLoader):
             "data_caveat",
             "exclude_openapi",
             "id",
+            "col_meta_clean",
         ]
         dfmeta_byfile["header"] = dfmeta_byfile[metacols_for_header].to_dict(
             orient="records"
