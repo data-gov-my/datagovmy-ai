@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 """Check the serving contract the frontend and the token-roll Lambda rely on.
 
+The frontend (datagovmy-front) calls the API from the browser at
+NEXT_PUBLIC_AI_URL with the rolling token as a Bearer header: /chat/stream
+(docs assistant) and /generate-meta (catalogue GUI). The token-roll Lambda
+POSTs {"ROLLING_TOKEN": ...} to /auth-token.
+
 Without a token it makes no model calls: it checks /health and that every
-protected route exists and rejects unauthenticated requests. With
-SMOKE_CHAT_TOKEN set it also sends one short chat message.
+route exists and rejects bad requests. With SMOKE_CHAT_TOKEN set it also
+sends one short chat message.
 
     python infra/scripts/smoke_test.py https://staging.example.org:8443
 """
@@ -39,6 +44,9 @@ def main(base: str) -> int:
         ("POST", "/chat/stream", chat_body, None, 401),
         ("POST", "/auth-token", {"ROLLING_TOKEN": "x"}, None, 401),
         ("POST", "/auth-token", {"ROLLING_TOKEN": "x"}, "not-the-key", 401),
+        # Called by the catalogue GUI. An empty body fails validation before
+        # any model call, which proves the route exists at no cost.
+        ("POST", "/generate-meta", {}, None, 422),
     ]
     token = os.environ.get("SMOKE_CHAT_TOKEN")
     if token:

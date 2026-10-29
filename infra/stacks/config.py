@@ -75,6 +75,7 @@ class Settings:
     certificate_arn: str
     staging_allowed_cidrs: list[str]
     waf_chat_rate_limit: int
+    waf_generate_meta_rate_limit: int
     waf_chat_rate_action: str
     db_instance_type: str
     datagpt_ui_image: str
@@ -112,6 +113,7 @@ def load_settings(scope: Construct) -> Settings:
         certificate_arn=ctx("certificateArn") or os.environ.get("CERTIFICATE_ARN", ""),
         staging_allowed_cidrs=list(ctx("stagingAllowedCidrs") or ["0.0.0.0/0"]),
         waf_chat_rate_limit=int(ctx("wafChatRateLimitPer5Min") or 300),
+        waf_generate_meta_rate_limit=int(ctx("wafGenerateMetaRateLimitPer5Min") or 30),
         waf_chat_rate_action=action,
         db_instance_type=ctx("dbInstanceType") or "t4g.small",
         datagpt_ui_image=ctx("datagptUiImage")

@@ -160,6 +160,36 @@ class PlatformStack(Stack):
             else wafv2.CfnWebACL.RuleActionProperty(count={})
         )
 
+        def rate_rule(name: str, priority: int, path: str, limit: int):
+            """Per-IP limit on one path prefix. The browser calls the API
+            directly (NEXT_PUBLIC_AI_URL), so the IP is the user's own."""
+            return wafv2.CfnWebACL.RuleProperty(
+                name=name,
+                priority=priority,
+                action=rate_action,
+                statement=wafv2.CfnWebACL.StatementProperty(
+                    rate_based_statement=wafv2.CfnWebACL.RateBasedStatementProperty(
+                        limit=limit,
+                        aggregate_key_type="IP",
+                        scope_down_statement=wafv2.CfnWebACL.StatementProperty(
+                            byte_match_statement=wafv2.CfnWebACL.ByteMatchStatementProperty(
+                                field_to_match=wafv2.CfnWebACL.FieldToMatchProperty(
+                                    uri_path={}
+                                ),
+                                positional_constraint="STARTS_WITH",
+                                search_string=path,
+                                text_transformations=[
+                                    wafv2.CfnWebACL.TextTransformationProperty(
+                                        priority=0, type="LOWERCASE"
+                                    )
+                                ],
+                            )
+                        ),
+                    )
+                ),
+                visibility_config=visibility(name),
+            )
+
         acl = wafv2.CfnWebACL(
             self,
             "WebAcl",
@@ -189,34 +219,15 @@ class PlatformStack(Stack):
                     ),
                     visibility_config=visibility("common"),
                 ),
-                # Starts in COUNT: if the frontend calls the API from its own
-                # servers, every user shares a few IPs and a per-IP limit would
-                # throttle them all. Check the WAF metrics before switching to BLOCK.
-                wafv2.CfnWebACL.RuleProperty(
-                    name="chat-rate",
-                    priority=1,
-                    action=rate_action,
-                    statement=wafv2.CfnWebACL.StatementProperty(
-                        rate_based_statement=wafv2.CfnWebACL.RateBasedStatementProperty(
-                            limit=settings.waf_chat_rate_limit,
-                            aggregate_key_type="IP",
-                            scope_down_statement=wafv2.CfnWebACL.StatementProperty(
-                                byte_match_statement=wafv2.CfnWebACL.ByteMatchStatementProperty(
-                                    field_to_match=wafv2.CfnWebACL.FieldToMatchProperty(
-                                        uri_path={}
-                                    ),
-                                    positional_constraint="STARTS_WITH",
-                                    search_string="/chat",
-                                    text_transformations=[
-                                        wafv2.CfnWebACL.TextTransformationProperty(
-                                            priority=0, type="LOWERCASE"
-                                        )
-                                    ],
-                                )
-                            ),
-                        )
-                    ),
-                    visibility_config=visibility("chat-rate"),
+                # Both start in COUNT (wafChatRateAction): check the WAF metrics
+                # for shared IPs (offices, campus NAT) before switching to BLOCK
+                rate_rule("chat-rate", 1, "/chat", settings.waf_chat_rate_limit),
+                # /generate-meta has no auth and every call is a model call
+                rate_rule(
+                    "generate-meta-rate",
+                    2,
+                    "/generate-meta",
+                    settings.waf_generate_meta_rate_limit,
                 ),
             ],
         )

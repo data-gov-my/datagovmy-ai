@@ -71,10 +71,18 @@ After step 4, CI owns deploys: `deploy.yml` for images, `infra.yml` for infra ch
 
 ## Cutover
 
-1. A week before: the new prod stack is healthy on the ALB DNS name, and the TTL on the serving DNS records is lowered to 60 s.
+What clients use today:
+
+- The frontend (`datagovmy-front`) calls the API **from the browser** at `NEXT_PUBLIC_AI_URL` = `https://ai.datagovmy.app:8005`: `/chat/stream` and `/generate-meta`, with the rolling token (from Vercel Edge Config, via a cookie) as a Bearer header. CORS therefore matters: `BACKEND_CORS_ORIGINS` must match exactly.
+- The token-roll Lambda (`datagovmy-front/lambda/roll_auth_token`) writes the new token to Edge Config, then POSTs it to the backend's `/auth-token` with `Bearer <WORKFLOW_TOKEN>`, which must equal `MASTER_TOKEN_KEY`.
+- `ai.datagovmy.app` is a CNAME to the Singapore ALB, in **DigitalOcean DNS**, TTL 43200 s (12 h). Its certificate is ACM-issued for `ai.datagovmy.app`.
+
+Before cutover: request an ACM certificate for `ai.datagovmy.app` in `ap-southeast-5` (DNS validation; add the CNAME it asks for in DigitalOcean if it isn't there already) and set `CERTIFICATE_ARN`.
+
+1. At least a day before: the new prod stack is healthy on the ALB DNS name, and the TTL on `ai.datagovmy.app` is lowered from 12 h to 60 s (the old TTL must expire first).
 2. Copy the parameters into `prod` if not done (`copy_params.sh prod --overwrite` picks up any changes).
 3. Right after a scheduled token roll, copy the live token from the Singapore host's `KEY_FILE` into `/datagovmy-ai/prod/AUTH_TOKEN` (an operator does this; the value is never pasted anywhere).
-4. Smoke test the new stack with the real token, then switch the serving records to the new ALB.
+4. Smoke test the new stack with the real token (`curl --resolve ai.datagovmy.app:8005:<new ALB IP>` or the ALB DNS name with `-k`), then change the `ai.datagovmy.app` CNAME to the new ALB's DNS name.
 5. Watch ALB 5xx, target health, `/chat` latency, 401s, and the next `/auth-token` call landing on the new stack.
 6. Rollback: point the records back at the Singapore ALB. If a token roll has already reached the new stack, copy that token back into the Singapore `KEY_FILE`.
 7. Keep the Singapore stack for a week, then decommission it.
