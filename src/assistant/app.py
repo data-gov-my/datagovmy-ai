@@ -3,9 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security.api_key import APIKey
 from fastapi_cache import FastAPICache
-from fastapi_cache.backends.redis import RedisBackend
-
-from redis import asyncio as aioredis
+from fastapi_cache.backends.inmemory import InMemoryBackend
 
 from langserve import add_routes
 
@@ -50,8 +48,8 @@ logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    redis = await aioredis.from_url("redis://host.docker.internal:6381")
-    FastAPICache.init(RedisBackend(redis), prefix="")
+    # Per-process cache: each task (or uvicorn process) keeps its own
+    FastAPICache.init(InMemoryBackend(), prefix="")
     yield
 
 

@@ -1,0 +1,20 @@
+# Used only by Dockerfile.ecs (BuildKit picks up <Dockerfile>.dockerignore).
+# Secrets and local state must never reach the image: the repo is public and
+# so is anything that leaks from an image.
+.env
+.env*
+*.pem
+key.bin
+chroma/
+data/
+notebooks/
+*.ipynb
+births.json
+__pycache__/
+*.pyc
+Dockerfile*
+crontab
+config/
+scripts/
+README.md
+TESTING.md
