@@ -17,7 +17,7 @@
     "createGithubOidcProvider": true,
     "publicAlb": false,
     "edgeWeights": {
-      "api": 0,
+      "api": 100,
       "ui": 0
     },
     "edgeAuthTokenToNew": true,
