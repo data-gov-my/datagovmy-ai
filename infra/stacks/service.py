@@ -507,7 +507,8 @@ class ServiceStack(Stack):
                 self,
                 "ApiUnhealthy",
                 alarm_name=f"{self.prefix}-api-unhealthy-targets",
-                metric=self.api_tg.metrics.unhealthy_host_count(
+                # NLB target groups spell it un_healthy (ALB: unhealthy)
+                metric=self.api_tg.metrics.un_healthy_host_count(
                     period=Duration.minutes(1), statistic="Maximum"
                 ),
                 threshold=1,
