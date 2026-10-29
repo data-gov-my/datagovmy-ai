@@ -1,7 +1,7 @@
 from aws_cdk import Aws, CfnOutput, Stack, aws_iam as iam
 from constructs import Construct
 
-from .config import CDK_QUALIFIER, PROJECT, Settings
+from .config import CDK_QUALIFIER, EDGE_REGION, PROJECT, REGION, Settings
 
 GITHUB_OIDC = "token.actions.githubusercontent.com"
 
@@ -52,11 +52,13 @@ class CiStack(Stack):
 
         for env in ("staging", "prod"):
             role = github_role(env, "production" if env == "prod" else "staging")
+            # CDK bootstrap roles in both regions (EdgeStack is in Singapore)
             role.add_to_policy(
                 iam.PolicyStatement(
                     actions=["sts:AssumeRole"],
                     resources=[
-                        f"arn:aws:iam::{Aws.ACCOUNT_ID}:role/cdk-{CDK_QUALIFIER}-*-{Aws.ACCOUNT_ID}-{Aws.REGION}"
+                        f"arn:aws:iam::{Aws.ACCOUNT_ID}:role/cdk-{CDK_QUALIFIER}-*-{Aws.ACCOUNT_ID}-{region}"
+                        for region in (REGION, EDGE_REGION)
                     ],
                 )
             )

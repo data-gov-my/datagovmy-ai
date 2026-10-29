@@ -16,12 +16,12 @@ from aws_cdk import (
     aws_logs as logs,
     aws_sns as sns,
     aws_sns_subscriptions as subs,
-    aws_wafv2 as wafv2,
 )
 from constructs import Construct
 
-from .config import DISCORD_WEBHOOK_PARAM, PROJECT, Settings
+from .config import DISCORD_WEBHOOK_PARAM, PROJECT, Settings, nlb_ips
 from .network import NetworkStack
+from .waf import ApiWebAcl
 
 LAMBDA_DIR = Path(__file__).resolve().parents[1] / "lambdas"
 
@@ -31,8 +31,14 @@ TLS_POLICY = elbv2.SslPolicy.RECOMMENDED_TLS
 
 
 class PlatformStack(Stack):
-    """Resources shared by staging and prod: image repo, cluster, ALB, WAF and
-    alerting. Services attach to the listeners from their own stacks."""
+    """Resources shared by staging and prod: image repo, cluster, load
+    balancers and alerting. Services attach listeners/rules from their own
+    stacks.
+
+    Traffic enters through the Singapore ALB (EdgeStack), which forwards over
+    VPC peering to the internal NLB here. With `publicAlb` the stack also gets
+    its own public ALB and WAF, for after ai.datagovmy.app is moved.
+    """
 
     def __init__(
         self,
@@ -59,64 +65,23 @@ class PlatformStack(Stack):
             self, "Cluster", vpc=network.vpc, cluster_name=PROJECT
         )
 
-        self.alb = elbv2.ApplicationLoadBalancer(
+        # Fixed private IPs: the Singapore ALB registers them as targets
+        self.nlb = elbv2.NetworkLoadBalancer(
             self,
-            "Alb",
+            "Nlb",
             vpc=network.vpc,
-            internet_facing=True,
-            security_group=network.alb_sg,
-            vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
-            # /chat/stream answers can run long; keep above the slowest stream
-            idle_timeout=Duration.seconds(300),
+            internet_facing=False,
+            security_groups=[network.nlb_sg],
+            cross_zone_enabled=True,  # staging runs one task, in one AZ
+            subnet_mappings=[
+                elbv2.SubnetMapping(subnet=subnet, private_ipv4_address=ip)
+                for subnet, ip in zip(network.app_subnets, nlb_ips())
+            ],
         )
 
-        not_found = elbv2.ListenerAction.fixed_response(
-            404, content_type="text/plain", message_body="Not found"
-        )
-
-        def listener(name: str, port: int, https: bool) -> elbv2.ApplicationListener:
-            return self.alb.add_listener(
-                name,
-                port=port,
-                protocol=(
-                    elbv2.ApplicationProtocol.HTTPS
-                    if https
-                    else elbv2.ApplicationProtocol.HTTP
-                ),
-                certificates=[cert] if https else None,
-                ssl_policy=TLS_POLICY if https else None,
-                default_action=not_found,
-                open=False,  # ingress is managed in NetworkStack
-            )
-
-        # Prod mirrors the Singapore ALB's ports. Without a certificate (before
-        # cutover) prod and staging are reachable over plain HTTP on the ALB
-        # DNS name only.
-        if settings.certificate_arn:
-            cert = acm.Certificate.from_certificate_arn(
-                self, "Cert", settings.certificate_arn
-            )
-            self.prod_listeners = [
-                listener("Https", 443, True),
-                listener("Https8005", 8005, True),
-            ]
-            self.staging_listener = listener("StagingHttps", 8443, True)
-            self.alb.add_listener(
-                "HttpRedirect",
-                port=80,
-                open=False,
-                default_action=elbv2.ListenerAction.redirect(
-                    protocol="HTTPS", port="443", permanent=True
-                ),
-            )
-        else:
-            cert = None
-            self.prod_listeners = [listener("Http", 80, False)]
-            self.staging_listener = listener("StagingHttp", 8080, False)
-
-        self.ui_listener = listener("Ui", settings.datagpt_ui_port, False)
-
-        self._waf(settings)
+        self.alb = None
+        if settings.public_alb:
+            self._public_alb(settings, network)
 
         # Alerts: SNS → Discord. Services publish alarms and ingest failures here.
         self.alerts = sns.Topic(self, "Alerts", topic_name=f"{PROJECT}-alerts")
@@ -143,97 +108,58 @@ class PlatformStack(Stack):
         )
         self.alerts.add_subscription(subs.LambdaSubscription(notifier))
 
-        CfnOutput(self, "AlbDnsName", value=self.alb.load_balancer_dns_name)
+        CfnOutput(self, "NlbIps", value=",".join(nlb_ips()))
         CfnOutput(self, "RepoUri", value=self.repo.repository_uri)
 
-    def _waf(self, settings: Settings) -> None:
-        def visibility(name: str):
-            return wafv2.CfnWebACL.VisibilityConfigProperty(
-                cloud_watch_metrics_enabled=True,
-                metric_name=name,
-                sampled_requests_enabled=True,
+    def _public_alb(self, settings: Settings, network: NetworkStack) -> None:
+        if not settings.certificate_arn:
+            raise ValueError("publicAlb needs CERTIFICATE_ARN (ACM, ap-southeast-5)")
+        cert = acm.Certificate.from_certificate_arn(
+            self, "Cert", settings.certificate_arn
+        )
+        self.alb = elbv2.ApplicationLoadBalancer(
+            self,
+            "Alb",
+            vpc=network.vpc,
+            internet_facing=True,
+            security_group=network.alb_sg,
+            vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
+            # /chat/stream answers can run long; keep above the slowest stream
+            idle_timeout=Duration.seconds(300),
+        )
+        not_found = elbv2.ListenerAction.fixed_response(
+            404, content_type="text/plain", message_body="Not found"
+        )
+
+        def listener(name: str, port: int, https: bool) -> elbv2.ApplicationListener:
+            return self.alb.add_listener(
+                name,
+                port=port,
+                protocol=(
+                    elbv2.ApplicationProtocol.HTTPS
+                    if https
+                    else elbv2.ApplicationProtocol.HTTP
+                ),
+                certificates=[cert] if https else None,
+                ssl_policy=TLS_POLICY if https else None,
+                default_action=not_found,
+                open=False,  # ingress is managed in NetworkStack
             )
 
-        rate_action = (
-            wafv2.CfnWebACL.RuleActionProperty(block={})
-            if settings.waf_chat_rate_action == "BLOCK"
-            else wafv2.CfnWebACL.RuleActionProperty(count={})
+        # Mirrors the Singapore ALB's ports
+        self.prod_listeners = [
+            listener("Https", 443, True),
+            listener("Https8005", 8005, True),
+        ]
+        self.staging_listener = listener("StagingHttps", 8443, True)
+        self.ui_listener = listener("Ui", settings.datagpt_ui_port, False)
+        self.alb.add_listener(
+            "HttpRedirect",
+            port=80,
+            open=False,
+            default_action=elbv2.ListenerAction.redirect(
+                protocol="HTTPS", port="443", permanent=True
+            ),
         )
-
-        def rate_rule(name: str, priority: int, path: str, limit: int):
-            """Per-IP limit on one path prefix. The browser calls the API
-            directly (NEXT_PUBLIC_AI_URL), so the IP is the user's own."""
-            return wafv2.CfnWebACL.RuleProperty(
-                name=name,
-                priority=priority,
-                action=rate_action,
-                statement=wafv2.CfnWebACL.StatementProperty(
-                    rate_based_statement=wafv2.CfnWebACL.RateBasedStatementProperty(
-                        limit=limit,
-                        aggregate_key_type="IP",
-                        scope_down_statement=wafv2.CfnWebACL.StatementProperty(
-                            byte_match_statement=wafv2.CfnWebACL.ByteMatchStatementProperty(
-                                field_to_match=wafv2.CfnWebACL.FieldToMatchProperty(
-                                    uri_path={}
-                                ),
-                                positional_constraint="STARTS_WITH",
-                                search_string=path,
-                                text_transformations=[
-                                    wafv2.CfnWebACL.TextTransformationProperty(
-                                        priority=0, type="LOWERCASE"
-                                    )
-                                ],
-                            )
-                        ),
-                    )
-                ),
-                visibility_config=visibility(name),
-            )
-
-        acl = wafv2.CfnWebACL(
-            self,
-            "WebAcl",
-            scope="REGIONAL",
-            default_action=wafv2.CfnWebACL.DefaultActionProperty(allow={}),
-            visibility_config=visibility(f"{PROJECT}-acl"),
-            rules=[
-                wafv2.CfnWebACL.RuleProperty(
-                    name="common",
-                    priority=0,
-                    override_action=wafv2.CfnWebACL.OverrideActionProperty(none={}),
-                    statement=wafv2.CfnWebACL.StatementProperty(
-                        managed_rule_group_statement=wafv2.CfnWebACL.ManagedRuleGroupStatementProperty(
-                            vendor_name="AWS",
-                            name="AWSManagedRulesCommonRuleSet",
-                            # Chat history and /generate-meta payloads exceed the
-                            # rule's 8 KB body limit; count instead of block
-                            rule_action_overrides=[
-                                wafv2.CfnWebACL.RuleActionOverrideProperty(
-                                    name="SizeRestrictions_BODY",
-                                    action_to_use=wafv2.CfnWebACL.RuleActionProperty(
-                                        count={}
-                                    ),
-                                )
-                            ],
-                        )
-                    ),
-                    visibility_config=visibility("common"),
-                ),
-                # Both start in COUNT (wafChatRateAction): check the WAF metrics
-                # for shared IPs (offices, campus NAT) before switching to BLOCK
-                rate_rule("chat-rate", 1, "/chat", settings.waf_chat_rate_limit),
-                # /generate-meta has no auth and every call is a model call
-                rate_rule(
-                    "generate-meta-rate",
-                    2,
-                    "/generate-meta",
-                    settings.waf_generate_meta_rate_limit,
-                ),
-            ],
-        )
-        wafv2.CfnWebACLAssociation(
-            self,
-            "WebAclAssociation",
-            resource_arn=self.alb.load_balancer_arn,
-            web_acl_arn=acl.attr_arn,
-        )
+        ApiWebAcl(self, "Waf", settings=settings, alb_arn=self.alb.load_balancer_arn)
+        CfnOutput(self, "AlbDnsName", value=self.alb.load_balancer_dns_name)
