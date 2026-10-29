@@ -30,7 +30,7 @@
     "dbInstanceType": "t4g.small",
     "datagptUiPort": 3001,
     "staging": {
-      "apiDesiredCount": 0,
+      "apiDesiredCount": 1,
       "apiMaxCount": 1,
       "ingestSchedule": "rate(1 day)",
       "ingestScheduleEnabled": false,
