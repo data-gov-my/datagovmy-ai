@@ -49,7 +49,7 @@ otherwise), and `DATAGPT_UI_IMAGE` set to the same value CI uses.
 ```json
 {
   "vpcId": "vpc-…", "vpcCidr": "172.31.0.0/16", "routeTableIds": ["rtb-…"],
-  "albArn": "arn:aws:elasticloadbalancing:ap-southeast-1:…:loadbalancer/app/datagovmy-ai-pen/…",
+  "albArn": "arn:aws:elasticloadbalancing:ap-southeast-1:…:loadbalancer/app/<name>/…",
   "albSecurityGroupId": "sg-…",
   "certificateArn": "arn:aws:acm:ap-southeast-1:…",
   "listeners": {"443": "arn:…", "8005": "arn:…", "3001": "arn:…"},
