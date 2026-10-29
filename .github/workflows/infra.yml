@@ -1,5 +1,6 @@
-# Deploy infrastructure changes (all stacks) after approval. Service stacks
-# keep their running image: the CDK CLI reuses the previous ImageTag value.
+# Deploy infrastructure changes (all stacks, both regions) after approval.
+# Service stacks keep their running image: the CDK CLI reuses the previous
+# ImageTag value. The cutover is an infra change too: edgeWeights in cdk.json.
 name: Infra
 
 on:
@@ -26,6 +27,7 @@ jobs:
         working-directory: infra
     env:
       CDK_DEPLOY_ACCOUNT: ${{ vars.AWS_ACCOUNT_ID }}
+      EDGE_CONFIG: ${{ vars.EDGE_CONFIG }}
       CERTIFICATE_ARN: ${{ vars.CERTIFICATE_ARN }}
       DATAGPT_UI_IMAGE: ${{ vars.DATAGPT_UI_IMAGE }}
     steps:

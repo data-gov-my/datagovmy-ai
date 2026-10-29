@@ -8,7 +8,9 @@ POSTs {"ROLLING_TOKEN": ...} to /auth-token.
 
 Without a token it makes no model calls: it checks /health and that every
 route exists and rejects bad requests. With SMOKE_CHAT_TOKEN set it also
-sends one short chat message.
+sends one short chat message. SMOKE_HEADER ("name: value") is added to every
+request; the Singapore ALB routes `x-datagovmy-backend: ecs` to the new
+stack whatever the cutover weight.
 
     python infra/scripts/smoke_test.py https://staging.example.org:8443
 """
@@ -23,6 +25,9 @@ import urllib.request
 
 def request(method: str, url: str, body=None, token=None, timeout=60):
     headers = {"Content-Type": "application/json"}
+    if extra := os.environ.get("SMOKE_HEADER"):
+        name, _, value = extra.partition(":")
+        headers[name.strip()] = value.strip()
     if token:
         headers["Authorization"] = f"Bearer {token}"
     data = json.dumps(body).encode() if body is not None else None

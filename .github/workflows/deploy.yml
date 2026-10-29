@@ -3,10 +3,12 @@
 # does nothing until the PLATFORM_DEPLOY_ENABLED repository variable is "true".
 #
 # GitHub setup (see infra/README.md):
-#   repository variables: PLATFORM_DEPLOY_ENABLED, AWS_ACCOUNT_ID,
-#                         CERTIFICATE_ARN, DATAGPT_UI_IMAGE
-#   environment "staging":    vars AWS_ROLE_ARN, BASE_URL; secret SMOKE_CHAT_TOKEN
-#   environment "production": vars AWS_ROLE_ARN, BASE_URL; required reviewers
+#   repository variables: PLATFORM_DEPLOY_ENABLED, AWS_ACCOUNT_ID, EDGE_CONFIG,
+#                         DATAGPT_UI_IMAGE, CERTIFICATE_ARN (publicAlb only)
+#   environment "staging":    vars AWS_ROLE_ARN, BASE_URL (https://ai.datagovmy.app:8443);
+#                             secret SMOKE_CHAT_TOKEN
+#   environment "production": vars AWS_ROLE_ARN, BASE_URL (https://ai.datagovmy.app:8005);
+#                             required reviewers
 #   both environments: deployment branches limited to main
 name: Deploy
 
@@ -29,6 +31,7 @@ env:
   AWS_REGION: ap-southeast-5
   CDK_VERSION: 2.1145.0
   CDK_DEPLOY_ACCOUNT: ${{ vars.AWS_ACCOUNT_ID }}
+  EDGE_CONFIG: ${{ vars.EDGE_CONFIG }}
   CERTIFICATE_ARN: ${{ vars.CERTIFICATE_ARN }}
   DATAGPT_UI_IMAGE: ${{ vars.DATAGPT_UI_IMAGE }}
 
@@ -106,8 +109,11 @@ jobs:
           npx --yes "aws-cdk@$CDK_VERSION" deploy DatagovmyAi-Service-prod
           --exclusively --require-approval never
           --parameters "DatagovmyAi-Service-prod:ImageTag=$GITHUB_SHA"
-      # No chat token in prod: contract checks only, no model calls
+      # No chat token in prod: contract checks only, no model calls. The
+      # header reaches the new stack through the Singapore ALB even before
+      # any users are moved to it.
       - name: Smoke test
         env:
           BASE_URL: ${{ vars.BASE_URL }}
+          SMOKE_HEADER: "x-datagovmy-backend: ecs"
         run: python infra/scripts/smoke_test.py "$BASE_URL"

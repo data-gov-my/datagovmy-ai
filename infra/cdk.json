@@ -15,12 +15,18 @@
   "context": {
     "githubRepo": "data-gov-my/datagovmy-ai",
     "createGithubOidcProvider": true,
+    "publicAlb": false,
+    "edgeWeights": {
+      "api": 0,
+      "ui": 0
+    },
+    "edgeAuthTokenToNew": false,
     "stagingAllowedCidrs": [
       "0.0.0.0/0"
     ],
     "wafChatRateLimitPer5Min": 300,
     "wafGenerateMetaRateLimitPer5Min": 30,
-    "wafChatRateAction": "COUNT",
+    "wafMode": "COUNT",
     "dbInstanceType": "t4g.small",
     "datagptUiPort": 3001,
     "staging": {

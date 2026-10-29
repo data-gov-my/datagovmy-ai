@@ -23,6 +23,7 @@ from .config import (
     API_SECRETS,
     AUTH_TOKEN_PARAM,
     INGEST_SECRETS,
+    NLB_PORTS,
     PROJECT,
     EnvConfig,
     Settings,
@@ -56,6 +57,7 @@ class ServiceStack(Stack):
     ) -> None:
         super().__init__(scope, id, **kwargs)
         self.env_name = env = env_config.name
+        self.settings = settings
         self.network = network
         self.data = data
         self.platform = platform
@@ -171,13 +173,18 @@ class ServiceStack(Stack):
         )
 
     def _environment(self) -> dict[str, str]:
-        return {
+        env = {
             "ENVIRONMENT": self.env_name,
             "AUTH_TOKEN_PARAM": param_name(self.env_name, AUTH_TOKEN_PARAM),
             "AWS_REGION": Aws.REGION,
         }
+        # Forward token rolls to the old host while both serve users (auth.py)
+        if self.env_name == "prod" and self.settings.edge.legacy_auth_token_url:
+            env["LEGACY_AUTH_TOKEN_URL"] = self.settings.edge.legacy_auth_token_url
+        return env
 
     def _api(self, settings: Settings, cfg: EnvConfig) -> ecs.FargateService:
+        self.api_log_group = self._log_group("Api")
         task = self._task_definition("Api", cpu=512, memory=2048)
         task.add_container(
             "api",
@@ -186,7 +193,7 @@ class ServiceStack(Stack):
             environment=self._environment(),
             secrets=self._secrets(API_SECRETS),
             logging=ecs.LogDrivers.aws_logs(
-                stream_prefix="api", log_group=self._log_group("Api")
+                stream_prefix="api", log_group=self.api_log_group
             ),
             stop_timeout=Duration.seconds(120),
         )
@@ -214,40 +221,91 @@ class ServiceStack(Stack):
             )
             scaling.scale_on_cpu_utilization("Cpu", target_utilization_percent=60)
 
-        self.api_tg = elbv2.ApplicationTargetGroup(
-            self,
-            "ApiTg",
-            vpc=self.network.vpc,
-            port=API_PORT,
-            protocol=elbv2.ApplicationProtocol.HTTP,
-            target_type=elbv2.TargetType.IP,
+        self.api_tg = self._expose(
+            "Api",
+            service,
+            container_port=API_PORT,
+            nlb_port=NLB_PORTS[self.env_name],
+            health_path="/health",
+            healthy_codes="200",
             # let in-flight /chat/stream responses finish during deploys
             deregistration_delay=Duration.seconds(120),
+            alb_listeners=lambda p: (
+                p.prod_listeners if self.env_name == "prod" else [p.staging_listener]
+            ),
+        )
+        return service
+
+    def _expose(
+        self,
+        name: str,
+        service: ecs.FargateService,
+        *,
+        container_port: int,
+        nlb_port: int,
+        health_path: str,
+        healthy_codes: str,
+        alb_listeners,
+        deregistration_delay: Duration = Duration.seconds(30),
+    ) -> elbv2.NetworkTargetGroup:
+        """Register the service with the internal NLB (reached from the
+        Singapore ALB) and, with publicAlb, with Malaysia's own ALB too. ECS
+        keeps both target groups up to date during deploys."""
+        tg = elbv2.NetworkTargetGroup(
+            self,
+            f"{name}NlbTg",
+            vpc=self.network.vpc,
+            port=container_port,
+            protocol=elbv2.Protocol.TCP,
+            target_type=elbv2.TargetType.IP,
+            deregistration_delay=deregistration_delay,
             health_check=elbv2.HealthCheck(
-                path="/health",
-                healthy_http_codes="200",
+                protocol=elbv2.Protocol.HTTP,
+                path=health_path,
+                healthy_http_codes=healthy_codes,
                 interval=Duration.seconds(15),
                 healthy_threshold_count=2,
                 unhealthy_threshold_count=3,
             ),
         )
-        service.attach_to_application_target_group(self.api_tg)
-
-        listeners = (
-            self.platform.prod_listeners
-            if self.env_name == "prod"
-            else [self.platform.staging_listener]
+        service.attach_to_network_target_group(tg)
+        # Created here, not in PlatformStack: an NLB listener needs its target
+        # group at creation and must not make the platform depend on services
+        elbv2.NetworkListener(
+            self,
+            f"{name}NlbListener",
+            load_balancer=self.platform.nlb,
+            port=nlb_port,
+            protocol=elbv2.Protocol.TCP,
+            default_target_groups=[tg],
         )
-        for i, listener in enumerate(listeners):
-            elbv2.ApplicationListenerRule(
+
+        if self.platform.alb is not None:
+            alb_tg = elbv2.ApplicationTargetGroup(
                 self,
-                f"ApiRule{i}",
-                listener=listener,
-                priority=100,
-                conditions=[elbv2.ListenerCondition.path_patterns(["/*"])],
-                action=elbv2.ListenerAction.forward([self.api_tg]),
+                f"{name}AlbTg",
+                vpc=self.network.vpc,
+                port=container_port,
+                protocol=elbv2.ApplicationProtocol.HTTP,
+                target_type=elbv2.TargetType.IP,
+                deregistration_delay=deregistration_delay,
+                health_check=elbv2.HealthCheck(
+                    path=health_path,
+                    healthy_http_codes=healthy_codes,
+                    interval=Duration.seconds(15),
+                ),
             )
-        return service
+            service.attach_to_application_target_group(alb_tg)
+            for i, listener in enumerate(alb_listeners(self.platform)):
+                elbv2.ApplicationListenerRule(
+                    self,
+                    f"{name}AlbRule{i}",
+                    listener=listener,
+                    priority=100,
+                    conditions=[elbv2.ListenerCondition.path_patterns(["/*"])],
+                    action=elbv2.ListenerAction.forward([alb_tg]),
+                )
+        return tg
 
     def _ingest(self, cfg: EnvConfig) -> str:
         task = self._task_definition("Ingest", cpu=1024, memory=2048)
@@ -420,27 +478,30 @@ class ServiceStack(Stack):
             max_healthy_percent=200,
             circuit_breaker=ecs.DeploymentCircuitBreaker(enable=True, rollback=True),
         )
-        tg = elbv2.ApplicationTargetGroup(
-            self,
-            "UiTg",
-            vpc=self.network.vpc,
-            port=port,
-            protocol=elbv2.ApplicationProtocol.HTTP,
-            target_type=elbv2.TargetType.IP,
-            health_check=elbv2.HealthCheck(path="/", healthy_http_codes="200-399"),
-        )
-        service.attach_to_application_target_group(tg)
-        elbv2.ApplicationListenerRule(
-            self,
-            "UiRule",
-            listener=self.platform.ui_listener,
-            priority=100,
-            conditions=[elbv2.ListenerCondition.path_patterns(["/*"])],
-            action=elbv2.ListenerAction.forward([tg]),
+        self._expose(
+            "Ui",
+            service,
+            container_port=port,
+            nlb_port=port,
+            health_path="/",
+            healthy_codes="200-399",
+            alb_listeners=lambda p: [p.ui_listener],
         )
 
     def _alarms(self, service: ecs.FargateService) -> None:
         action = cw_actions.SnsAction(self.platform.alerts)
+        # The NLB doesn't see HTTP status codes; count the app's own 500s.
+        # (5xx from the Singapore ALB itself show in its metrics, in Singapore.)
+        server_errors = logs.MetricFilter(
+            self,
+            "Api500s",
+            log_group=self.api_log_group,
+            filter_pattern=logs.FilterPattern.literal('"500 Internal Server Error"'),
+            metric_namespace=PROJECT,
+            metric_name=f"{self.env_name}-api-500",
+            metric_value="1",
+            default_value=0,
+        )
         alarms = [
             cloudwatch.Alarm(
                 self,
@@ -457,9 +518,9 @@ class ServiceStack(Stack):
             cloudwatch.Alarm(
                 self,
                 "Api5xx",
-                alarm_name=f"{self.prefix}-api-5xx",
-                metric=self.api_tg.metrics.http_code_target(
-                    elbv2.HttpCodeTarget.TARGET_5XX_COUNT, period=Duration.minutes(5)
+                alarm_name=f"{self.prefix}-api-500s",
+                metric=server_errors.metric(
+                    statistic="Sum", period=Duration.minutes(5)
                 ),
                 threshold=10,
                 evaluation_periods=1,

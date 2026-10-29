@@ -1,5 +1,7 @@
 import asyncio
 import json
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.inmemory import InMemoryBackend
@@ -88,6 +90,43 @@ def test_missing_parameter_rejects_everything(monkeypatch):
 def test_non_ascii_token_is_rejected_not_an_error(monkeypatch):
     store = SSMTokenStore("/p", client=FakeSSM("tok-1"))
     assert not valid(store, "tokén", monkeypatch)
+
+
+def test_rotation_is_forwarded_to_the_old_host(monkeypatch):
+    received = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self):
+            body = self.rfile.read(int(self.headers["Content-Length"]))
+            received.append(
+                (self.path, self.headers["Authorization"], json.loads(body))
+            )
+            self.send_response(200)
+            self.end_headers()
+
+        def log_message(self, *args):
+            pass
+
+    server = HTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.handle_request, daemon=True).start()
+    monkeypatch.setenv("MASTER_TOKEN_KEY", "master")
+    url = f"http://127.0.0.1:{server.server_port}/auth-token"
+
+    ssm = FakeSSM("tok-1")
+    asyncio.run(SSMTokenStore("/p", client=ssm, mirror_url=url).update_key("tok-2"))
+    server.server_close()
+
+    # Exactly what the token-roll Lambda sends
+    assert received == [("/auth-token", "Bearer master", {"ROLLING_TOKEN": "tok-2"})]
+    assert json.loads(ssm.value)["current"] == "tok-2"
+
+
+def test_old_host_down_does_not_fail_rotation(caplog):
+    ssm = FakeSSM("tok-1")
+    store = SSMTokenStore("/p", client=ssm, mirror_url="http://127.0.0.1:9/auth-token")
+    asyncio.run(store.update_key("tok-2"))
+    assert json.loads(ssm.value)["current"] == "tok-2"
+    assert "Forwarding the rolling token to the old host failed" in caplog.text
 
 
 def test_key_file_mode_unchanged(monkeypatch, tmp_path):
