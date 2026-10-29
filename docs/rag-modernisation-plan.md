@@ -142,7 +142,7 @@ Graph-wide: `set_node_defaults(retry_policy=RetryPolicy(max_attempts=3), timeout
 LangServe is in maintenance mode, and streaming a graph through `add_routes` emits state chunks, not tokens. To keep the frontend working:
 
 - **Phase 1 (compat):** keep `/chat` via `add_routes` on a thin runnable `graph.astream(..., stream_mode="messages")`, filtered to the `generate` node and mapped to string chunks. The existing UI contract is unchanged.
-- **Phase 2:** add `/v2/chat` as a plain FastAPI `EventSourceResponse` (sse-starlette is already a dependency) streaming `{type: "token"|"sources"|"done"}`. Move the frontend over, then remove LangServe.
+- **Phase 2:** out of scope. Serving endpoints and their request/response shapes stay as they are.
 
 ## 7. Phased plan
 
@@ -152,7 +152,7 @@ LangServe is in maintenance mode, and streaming a graph through `add_routes` emi
 | **1. Models** (this branch) | GPT-6 swap, env-overridable. | Smoke test in staging; eval ≥ baseline |
 | **2. Dependency upgrade** (1 day) | Bump to langchain 1.4 / core 1.7 / langgraph 1.2 / langchain-openai 1.7 / langchain-chroma 1.1 / openai 3.x. Port imports (`langchain_core.documents`, `langchain_text_splitters`, `langchain_classic.indexes`). Delete `vect.py`. Replace `EnsembleRetriever` with local RRF. Fix the `app.py` bugs (#13). | App boots, ingest runs, eval unchanged |
 | **3. LangGraph RAG** (2–3 days) | Implement §5. Fix findings #1–#10. | Eval: retrieval hit-rate and follow-up accuracy up; p50 latency ≤ baseline |
-| **4. Serving** (1 day) | Phase 1 compat adapter, then `/v2/chat` with sources. | Frontend works unchanged, then migrates |
+| **4. Serving** (1 day) | Phase 1 compat adapter only; no new endpoints. | Frontend works unchanged, then migrates |
 | **5. Hardening** | Node cache on Redis, `trace_policy` redaction, LangSmith online evaluators on sampled production traces, alerting on refusal rate. Port `generate_meta` to the same patterns (#15). | – |
 
 ## 8. Implementation status (this branch)
@@ -165,7 +165,7 @@ What changed versus the plan:
 - **Fixed findings:** #1, #2, #3, #5, #6, #8, #9 (stray quotes), #11, #13, #14, #15, #16. **Withdrawn:** #7. Answering on the rewrite is deliberate: it is the jailbreak filter and carries the assumed context for terse questions (see Guardrails). The rewrite now comes from a structured call with no `temperature`. **Open:** #4 (relevance threshold/rerank: needs eval data to tune), #10 (citations in the answer text; sources are emitted separately on `/v2`), #12 (cache is per process; Redis-backed cache is phase 5), #17.
 - **Reliability:** `analyse` has `RetryPolicy`, `TimeoutPolicy` and an `error_handler` that **fails closed** (a canned "try again" reply, no answer-model call). Its node cache (`RAG_CACHE_TTL_SECONDS`, default 900s) skips the LLM call for repeated first-turn questions, and fallbacks are not cached. `generate` has an idle timeout and no graph retry, because a retry after tokens have streamed would duplicate output.
 - **Deviation:** retrieval does its own retry (`with_retry`), timeout and empty fallback *inside* the node, rather than using node policies. In langgraph 1.2.17 an `error_handler` doesn't stop the error being re-raised when a fanned-out (`Send`) sibling task fails; it only works for single tasks (reproduced in isolation). Retrieval isn't node-cached, so a failed search is never cached.
-- **Serving:** `/chat` (LangServe) keeps the exact contract (`{"messages": [...]}` in, string chunks out) and the `RAGChain` root run name in LangSmith. The new `POST /v2/chat/stream` (same auth) is SSE: `sources` (`[{title, url}]`), then `token` events, then `end`.
+- **Serving:** `/chat` (LangServe) keeps the exact contract (`{"messages": [...]}` in, string chunks out) and the `RAGChain` root run name in LangSmith.
 - **No legacy flag:** the old LCEL chain couldn't run on langchain 1.x without porting its removed imports, so it was replaced rather than kept behind `DOCS_CHAIN`. To roll back, revert the branch: the Chroma index and ingest format are unchanged.
 - **Dependencies:** `langchain-chroma` is held at **1.0.0** (not 1.1) because 1.1 needs chromadb ≥ 1.3.5, while the Chroma server image is 1.1.0. Bump the server image and client together later. `langchain`/`langchain-community`/`faiss-cpu`/`weaviate-client` are removed. `langchain-classic` is kept only for `SQLRecordManager` in ingest. `cryptography` and `sqlalchemy[asyncio]` were transitive before and are now pinned explicitly.
 - **Behaviour changes to watch:**
@@ -173,7 +173,7 @@ What changed versus the plan:
   - Off-topic and blocked messages get a short model-written decline (see Guardrails). Messages the analyser can't make sense of ("Gill", "J", random characters) are classed `unclear` and get a canned request to clarify, in English and Malay, since language detection on one word isn't reliable. The old chain's rewrite turned these into clarification questions that the answer model then "answered".
   - Only English and Malay are supported. Messages in other languages are rewritten and answered in English.
   - Neutral requests for official election or parliament data are classed as `docs` and still answered; tune this in `QUERY_ANALYSIS_PROMPT` if policy says otherwise.
-- **Tests:** `tests/test_chain.py` (fake LLM and search, no network). Run with `python -m pytest tests` from the repo root. A FastAPI `TestClient` smoke test of `/chat/invoke`, `/chat/stream`, `/v2/chat/stream`, auth, CORS and `/health` passed locally with fake models.
+- **Tests:** `tests/test_chain.py` (fake LLM and search, no network). Run with `python -m pytest tests` from the repo root. A FastAPI `TestClient` smoke test of `/chat/invoke`, `/chat/stream`, auth, CORS and `/health` passed locally with fake models.
 - **Eval:** a 60-question set drawn from production traces (Aug–Oct 2026) plus synthetic red-team and false-positive cases is kept outside the repo, as it contains real user messages. Against real models and a September 2025 copy of the index, all 60 were routed as expected (intent, language, decline reason, expected sources), and the answers were reviewed by hand. Not yet compared against the old chain, and the index should be rebuilt before that comparison.
 
 ### Guardrails
@@ -201,7 +201,7 @@ The repo is open source, so every prompt and rule is visible. The guards are bui
 
 1. **Allowlist, not denylist.** Only messages classified `docs` or `smalltalk` reach the answer model. A message that dodges the `blocked` patterns usually lands in `off_topic`, which is still declined. To get through, an attacker has to make the message genuinely look like a docs question.
 2. **Capability limits.** The bot has no tools, no secrets and no data beyond public docs. The answer model never sees raw user text, and the decline model sees only fixed reasons. Knowing the prompts doesn't create a path for user text to reach them. What's left at risk is mainly reputational: screenshots.
-3. **Output checks against runtime data** (`guards.py`, applied to `/chat` and `/v2/chat/stream`). To pass them, the text or link has to exist in data.gov.my's own docs, which the attacker can't edit.
+3. **Output checks against runtime data** (`guards.py`, applied to `/chat`). To pass them, the text or link has to exist in data.gov.my's own docs, which the attacker can't edit.
    - Links: only `*.data.gov.my` / `*.dosm.gov.my`, or URLs that appear verbatim in the retrieved docs. Others are removed.
    - Echo: if the answer reproduces a 3+ word phrase the user put in double quotes, and the phrase isn't in the retrieved docs, the answer stops and a canned refusal is appended. This stops "how do I query the dataset called "<statement>"" smuggling.
    - Text is released a sentence or line at a time, so streaming stays live and each piece is checked before display.

@@ -8,7 +8,6 @@ from fastapi_cache.backends.redis import RedisBackend
 from redis import asyncio as aioredis
 
 from langserve import add_routes
-from sse_starlette.sse import EventSourceResponse
 
 from langchain_core.runnables import RunnableConfig
 
@@ -26,7 +25,7 @@ from schema import (
     TokenUpdateResponse,
     GenerateMetaResponse,
 )
-from chain import build_rag_graph, create_chat_runnable, stream_chat_events
+from chain import build_rag_graph, create_chat_runnable
 from generate_meta import build_generate_meta_graph, build_translation_keys
 
 load_dotenv()
@@ -76,20 +75,6 @@ add_routes(
     path="/chat",
     dependencies=[Depends(get_token)],
 )
-
-
-@app.post("/v2/chat/stream", dependencies=[Depends(get_token)])
-async def chat_stream(payload: ChatRequest):
-    """SSE stream of `sources` (list of {title, url}) then `token` events"""
-
-    async def events():
-        async for event in stream_chat_events(
-            rag_graph, payload.model_dump(), RunnableConfig(run_name="RAGChain")
-        ):
-            yield {"event": event["type"], "data": json.dumps(event["data"])}
-        yield {"event": "end", "data": ""}
-
-    return EventSourceResponse(events())
 
 
 @app.post("/generate-meta", response_model=GenerateMetaResponse)
