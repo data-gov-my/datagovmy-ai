@@ -1,0 +1,68 @@
+# Run the ingest task on demand, or when the docs repo sends a
+# `docs-updated` repository_dispatch event. The scheduled run lives in AWS
+# (EventBridge Scheduler); this is for refreshing sooner.
+#
+# Uses the "ingest" environment (deployment branches: main, no reviewers) and
+# a role that can only start the ingest tasks.
+name: Ingest
+
+on:
+  repository_dispatch:
+    types: [docs-updated]
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        options: [prod, staging]
+        default: prod
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: ingest-${{ inputs.environment || 'prod' }}
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    if: vars.PLATFORM_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    environment: ingest
+    timeout-minutes: 45
+    env:
+      TARGET: ${{ inputs.environment || 'prod' }}
+    steps:
+      - uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ap-southeast-5
+      - name: Run ingest task
+        run: |
+          set -euo pipefail
+          stack="DatagovmyAi-Service-$TARGET"
+          output() {
+            aws cloudformation describe-stacks --stack-name "$stack" \
+              --query "Stacks[0].Outputs[?OutputKey=='$1'].OutputValue" --output text
+          }
+          family=$(output IngestTaskFamily)
+          subnets=$(output AppSubnets)
+          sg=$(output AppSecurityGroup)
+
+          task=$(aws ecs run-task --cluster datagovmy-ai --task-definition "$family" \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[$subnets],securityGroups=[$sg],assignPublicIp=DISABLED}" \
+            --query 'tasks[0].taskArn' --output text)
+          echo "Started $task"
+
+          for _ in $(seq 1 160); do
+            status=$(aws ecs describe-tasks --cluster datagovmy-ai --tasks "$task" \
+              --query 'tasks[0].lastStatus' --output text)
+            [ "$status" = "STOPPED" ] && break
+            sleep 15
+          done
+
+          read -r code reason < <(aws ecs describe-tasks --cluster datagovmy-ai --tasks "$task" \
+            --query 'tasks[0].[containers[0].exitCode, stoppedReason]' --output text)
+          echo "Status: $status, exit code: $code, reason: $reason"
+          [ "$code" = "0" ]

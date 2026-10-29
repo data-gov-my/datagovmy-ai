@@ -1,0 +1,49 @@
+# Deploy infrastructure changes (all stacks) after approval. Service stacks
+# keep their running image: the CDK CLI reuses the previous ImageTag value.
+name: Infra
+
+on:
+  push:
+    branches: [main]
+    paths: ["infra/**", ".github/workflows/infra.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: platform-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: vars.PLATFORM_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    environment: production
+    defaults:
+      run:
+        working-directory: infra
+    env:
+      CDK_DEPLOY_ACCOUNT: ${{ vars.AWS_ACCOUNT_ID }}
+      CERTIFICATE_ARN: ${{ vars.CERTIFICATE_ARN }}
+      DATAGPT_UI_IMAGE: ${{ vars.DATAGPT_UI_IMAGE }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ap-southeast-5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: infra/requirements.txt
+      - run: pip install -r requirements.txt
+      - run: npx --yes aws-cdk@2.1145.0 diff
+      - run: npx --yes aws-cdk@2.1145.0 deploy --all --require-approval never
