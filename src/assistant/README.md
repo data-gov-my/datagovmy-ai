@@ -2,7 +2,7 @@
 
 AI assistant backends for datagovmy
 
-- `chain.py`: docs assistant RAG graph (LangGraph), served at `/chat` (LangServe) and `/v2/chat/stream` (SSE with sources)
+- `chain.py`: docs assistant RAG graph (LangGraph), served at `/chat` (LangServe)
 - `generate_meta.py`: dataset metadata generation graph, served at `/generate-meta`
 - `ingest.py`: refreshes the Chroma index (run by the cron container)
 - `models.py`: OpenAI model ids (overridable via env, see `.env.example`) and the shared Chroma vectorstore
