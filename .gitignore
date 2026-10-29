@@ -48,3 +48,8 @@ Desktop.ini
 *~
 .ipynb_checkpoints
 data/*record.parquet
+
+# CDK
+infra/cdk.out/
+# Context lookups record account IDs; the repo is public
+infra/cdk.context.json
