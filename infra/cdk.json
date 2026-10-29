@@ -20,7 +20,7 @@
       "api": 0,
       "ui": 0
     },
-    "edgeAuthTokenToNew": false,
+    "edgeAuthTokenToNew": true,
     "stagingAllowedCidrs": [
       "0.0.0.0/0"
     ],
