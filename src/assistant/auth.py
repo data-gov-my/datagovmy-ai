@@ -78,6 +78,7 @@ class SSMTokenStore:
         self.mirror_url = mirror_url
         self._tokens: list[str] = []
         self._fetched_at = float("-inf")
+        self._forwards: set[asyncio.Task] = set()
 
     @property
     def client(self):
@@ -125,7 +126,11 @@ class SSMTokenStore:
         self._tokens = [t for t in (api_key, previous) if t]
         self._fetched_at = time.monotonic()
         if self.mirror_url:
-            await asyncio.to_thread(self._mirror, api_key)
+            # Not awaited: the token-roll Lambda gives up after 3 s and
+            # retries, and a down old host takes 5 s to time out
+            task = asyncio.create_task(asyncio.to_thread(self._mirror, api_key))
+            self._forwards.add(task)
+            task.add_done_callback(self._forwards.discard)
 
     def _mirror(self, api_key: str) -> None:
         """Best effort: this stack already has the token, so a failure here
