@@ -1,4 +1,4 @@
-from fastapi import Depends, FastAPI, status
+from fastapi import Depends, FastAPI, HTTPException, status
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security.api_key import APIKey
@@ -8,11 +8,12 @@ from fastapi_cache.backends.redis import RedisBackend
 from redis import asyncio as aioredis
 
 from langserve import add_routes
-from langserve.schema import CustomUserType
+from sse_starlette.sse import EventSourceResponse
 
 from langchain_core.runnables import RunnableConfig
 
 from dotenv import load_dotenv
+import json
 import logging
 import os
 
@@ -23,18 +24,21 @@ from schema import (
     HealthCheck,
     TokenUpdate,
     TokenUpdateResponse,
-    ChainType,
-    Message,
     GenerateMetaResponse,
-    DatasetMetadata,
 )
-from chain import create_new_chain
+from chain import build_rag_graph, create_chat_runnable, stream_chat_events
 from generate_meta import build_generate_meta_graph, build_translation_keys
 
 load_dotenv()
 
-# maximum history of messages for memory
-MAX_MESSAGES = 5
+
+def parse_cors_origins(value: str | None) -> list[str]:
+    """Accept a JSON list or a comma-separated string"""
+    if not value:
+        return []
+    if value.strip().startswith("["):
+        return json.loads(value)
+    return [origin.strip() for origin in value.split(",")]
 
 
 class EndpointFilter(logging.Filter):
@@ -43,11 +47,6 @@ class EndpointFilter(logging.Filter):
 
 
 logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
-
-
-class NewChatReqest(CustomUserType):
-    # chain_type: ChainType = ChainType.DOCS
-    messages: list
 
 
 @asynccontextmanager
@@ -60,21 +59,37 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.getenv("BACKEND_CORS_ORIGINS"),
+    allow_origins=parse_cors_origins(os.getenv("BACKEND_CORS_ORIGINS")),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-rag_chain = create_new_chain()
+rag_graph = build_rag_graph()
 generate_meta_graph = build_generate_meta_graph()
 
+# LangServe contract kept for the existing frontend: {"messages": [...]} in,
+# answer string (streamed) out
 add_routes(
     app,
-    rag_chain,
+    create_chat_runnable(rag_graph),
     path="/chat",
     dependencies=[Depends(get_token)],
 )
+
+
+@app.post("/v2/chat/stream", dependencies=[Depends(get_token)])
+async def chat_stream(payload: ChatRequest):
+    """SSE stream of `sources` (list of {title, url}) then `token` events"""
+
+    async def events():
+        async for event in stream_chat_events(
+            rag_graph, payload.model_dump(), RunnableConfig(run_name="RAGChain")
+        ):
+            yield {"event": event["type"], "data": json.dumps(event["data"])}
+        yield {"event": "end", "data": ""}
+
+    return EventSourceResponse(events())
 
 
 @app.post("/generate-meta", response_model=GenerateMetaResponse)
@@ -92,11 +107,6 @@ async def generate_meta(payload: GenerateMetaRequest):
     return GenerateMetaResponse(
         metadata=dataset_meta,
     )
-
-
-@app.get("/health", response_model=HealthCheck)
-def get_health():
-    return HealthCheck(status="OK")
 
 
 @app.post(

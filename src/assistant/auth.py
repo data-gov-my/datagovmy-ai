@@ -29,8 +29,8 @@ class APIKeyManager:
         # encrypted_key = self.encrypt_key(api_key)
         with open(self.key_file_path, "w") as file:
             file.write(api_key)
-        # invalidate cache
-        await FastAPICache.clear(namespace="token")
+        # invalidate cache — clear() without namespace is more reliable than namespace-scoped clear
+        await FastAPICache.clear()
 
     def get_key(self):
         if os.getenv("ENVIRONMENT") == "dev":
@@ -49,7 +49,7 @@ key_manager = APIKeyManager(
 )
 
 
-@cache(namespace="token")
+@cache(namespace="token", expire=300)
 async def retrieve_token() -> str:
     return key_manager.get_key()
 
