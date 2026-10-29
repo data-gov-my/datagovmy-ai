@@ -10,7 +10,6 @@ from langserve import add_routes
 from langchain_core.runnables import RunnableConfig
 
 from dotenv import load_dotenv
-import json
 import logging
 import os
 
@@ -24,18 +23,10 @@ from schema import (
     GenerateMetaResponse,
 )
 from chain import build_rag_graph, create_chat_runnable
+from utils.helpers import parse_cors_origins
 from generate_meta import build_generate_meta_graph, build_translation_keys
 
 load_dotenv()
-
-
-def parse_cors_origins(value: str | None) -> list[str]:
-    """Accept a JSON list or a comma-separated string"""
-    if not value:
-        return []
-    if value.strip().startswith("["):
-        return json.loads(value)
-    return [origin.strip() for origin in value.split(",")]
 
 
 class EndpointFilter(logging.Filter):
@@ -54,9 +45,13 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+cors_origins = parse_cors_origins(os.getenv("BACKEND_CORS_ORIGINS"))
+# Origins aren't secret (browsers send them); log them so a bad value shows up
+# at deploy time rather than as rejected browser requests
+logging.getLogger("uvicorn.error").info("CORS allowed origins: %s", cors_origins)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=parse_cors_origins(os.getenv("BACKEND_CORS_ORIGINS")),
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
