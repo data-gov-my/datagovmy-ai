@@ -1,6 +1,7 @@
 import asyncio
 import json
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from fastapi_cache import FastAPICache
@@ -113,7 +114,7 @@ def test_rotation_is_forwarded_to_the_old_host(monkeypatch):
     url = f"http://127.0.0.1:{server.server_port}/auth-token"
 
     ssm = FakeSSM("tok-1")
-    asyncio.run(SSMTokenStore("/p", client=ssm, mirror_url=url).update_key("tok-2"))
+    asyncio.run(update_and_forward(SSMTokenStore("/p", client=ssm, mirror_url=url)))
     server.server_close()
 
     # Exactly what the token-roll Lambda sends
@@ -121,12 +122,32 @@ def test_rotation_is_forwarded_to_the_old_host(monkeypatch):
     assert json.loads(ssm.value)["current"] == "tok-2"
 
 
+async def update_and_forward(store, token="tok-2"):
+    await store.update_key(token)
+    await asyncio.gather(*store._forwards)
+
+
 def test_old_host_down_does_not_fail_rotation(caplog):
     ssm = FakeSSM("tok-1")
     store = SSMTokenStore("/p", client=ssm, mirror_url="http://127.0.0.1:9/auth-token")
-    asyncio.run(store.update_key("tok-2"))
+    asyncio.run(update_and_forward(store))
     assert json.loads(ssm.value)["current"] == "tok-2"
     assert "Forwarding the rolling token to the old host failed" in caplog.text
+
+
+def test_rotation_does_not_wait_for_the_old_host(monkeypatch):
+    # The token-roll Lambda times out after 3 s; the old host may take 5 s
+    store = SSMTokenStore("/p", client=FakeSSM("tok-1"), mirror_url="http://old")
+    monkeypatch.setattr(store, "_mirror", lambda token: time.sleep(1))
+
+    async def run():
+        start = time.monotonic()
+        await store.update_key("tok-2")
+        elapsed = time.monotonic() - start
+        await asyncio.gather(*store._forwards)
+        return elapsed
+
+    assert asyncio.run(run()) < 0.5
 
 
 def test_key_file_mode_unchanged(monkeypatch, tmp_path):
