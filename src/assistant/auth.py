@@ -2,8 +2,11 @@ from cryptography.fernet import Fernet
 import asyncio
 import hmac
 import json
+import logging
 import os
 import time
+import urllib.error
+import urllib.request
 
 from utils.cache import cache
 
@@ -12,6 +15,7 @@ from fastapi.security.http import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi_cache import FastAPICache
 
 get_bearer_token = HTTPBearer(auto_error=False)
+logger = logging.getLogger(__name__)
 
 
 class APIKeyManager:
@@ -58,14 +62,20 @@ class SSMTokenStore:
     the parameter once (rate limited) before rejecting it, so a client using
     the new token is never turned away by a stale cache. A plain string value
     (seeded by an operator) is read as the current token.
+
+    During the cutover the Singapore ALB splits users between the old host
+    and this stack, but sends every /auth-token call here. With mirror_url
+    set (LEGACY_AUTH_TOKEN_URL), the token is forwarded to the old host's
+    /auth-token too, so both sides always accept the current token.
     """
 
     TTL_SECONDS = 60
     MIN_REFRESH_SECONDS = 5
 
-    def __init__(self, param_name: str, client=None):
+    def __init__(self, param_name: str, client=None, mirror_url: str | None = None):
         self.param_name = param_name
         self._client = client
+        self.mirror_url = mirror_url
         self._tokens: list[str] = []
         self._fetched_at = float("-inf")
 
@@ -114,13 +124,34 @@ class SSMTokenStore:
         )
         self._tokens = [t for t in (api_key, previous) if t]
         self._fetched_at = time.monotonic()
+        if self.mirror_url:
+            await asyncio.to_thread(self._mirror, api_key)
+
+    def _mirror(self, api_key: str) -> None:
+        """Best effort: this stack already has the token, so a failure here
+        must not fail the Lambda's call. Users still on the old host would get
+        401s until the next roll, hence the error log."""
+        req = urllib.request.Request(
+            self.mirror_url,
+            data=json.dumps({"ROLLING_TOKEN": api_key}).encode(),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {os.getenv('MASTER_TOKEN_KEY')}",
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=5):
+                pass
+        except (urllib.error.URLError, OSError) as e:
+            logger.error("Forwarding the rolling token to the old host failed: %s", e)
 
 
 def build_key_manager() -> APIKeyManager | SSMTokenStore:
     # AUTH_TOKEN_PARAM is set on the ECS platform; the Singapore host keeps
     # using KEY_FILE until it's decommissioned
     if param := os.getenv("AUTH_TOKEN_PARAM"):
-        return SSMTokenStore(param)
+        return SSMTokenStore(param, mirror_url=os.getenv("LEGACY_AUTH_TOKEN_URL"))
     return APIKeyManager(
         key_file_path=os.getenv("KEY_FILE"), encryption_key=os.getenv("ENCRYPT_KEY")
     )
