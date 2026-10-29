@@ -19,6 +19,7 @@
       "0.0.0.0/0"
     ],
     "wafChatRateLimitPer5Min": 300,
+    "wafGenerateMetaRateLimitPer5Min": 30,
     "wafChatRateAction": "COUNT",
     "dbInstanceType": "t4g.small",
     "datagptUiPort": 3001,
