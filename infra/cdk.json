@@ -37,11 +37,11 @@
       "alarms": false
     },
     "prod": {
-      "apiDesiredCount": 0,
+      "apiDesiredCount": 2,
       "apiMaxCount": 4,
       "ingestSchedule": "rate(1 hour)",
-      "ingestScheduleEnabled": false,
-      "alarms": false
+      "ingestScheduleEnabled": true,
+      "alarms": true
     },
     "@aws-cdk-containers/ecs-service-extensions:enableDefaultLogDriver": true,
     "@aws-cdk/aws-apigateway:authorizerChangeDeploymentLogicalId": true,
