@@ -1,8 +1,27 @@
 import re
 import os
 import ast
+import json
 from typing import List, Optional
 import requests
+
+
+# Config
+def parse_cors_origins(value: Optional[str]) -> List[str]:
+    """Allowed CORS origins from a JSON list or a comma-separated string.
+
+    Also accepts what the previous deployment tolerated, because it passed the
+    raw string to Starlette (which then matched origins as substrings): a
+    value wrapped in quotes, e.g. `'["*"]'`, and trailing slashes. Origins
+    must otherwise match exactly, scheme included.
+    """
+    if not value:
+        return []
+    value = value.strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in "'\"":
+        value = value[1:-1].strip()
+    origins = json.loads(value) if value.startswith("[") else value.split(",")
+    return [o.strip().rstrip("/") for o in origins if o.strip()]
 
 
 # Text Utils
