@@ -1,4 +1,4 @@
-from langchain.text_splitter import (
+from langchain_text_splitters import (
     MarkdownHeaderTextSplitter,
     RecursiveCharacterTextSplitter,
 )

@@ -1,4 +1,4 @@
-"""This is a script to refresh the weaviate index.
+"""This is a script to refresh the chroma index.
 Will be a replacing the entire dagster pipeline
 For docs AI:
 1. Load docs data from mdx files: docs (github) and local
@@ -10,19 +10,17 @@ Downside is need to load and parse everything regardless.
 """
 
 import os
-import chromadb
-from chromadb.config import Settings
 import requests
 import pandas as pd
 from typing import List
 from dotenv import load_dotenv
 
-from langchain_chroma import Chroma
-from langchain.indexes import SQLRecordManager, index
-from langchain.docstore.document import Document
-from langchain_openai.embeddings import OpenAIEmbeddings
+from langchain_classic.indexes import SQLRecordManager
+from langchain_core.indexing import index
+from langchain_core.documents import Document
 
 from loaders import MdxLoader, DashboardMetaLoader, DCMetaLoader
+from models import get_vectorstore
 from utils.helpers import send_telegram
 
 load_dotenv()
@@ -99,17 +97,7 @@ def load_mdx_docs() -> List:
 def run_index(docs, class_name):
     # connect to chroma db vectorstore
     print("Connecting to Chroma DB at", os.getenv("CHROMA_HOST"))
-    oai_embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-    client = chromadb.HttpClient(
-        host=os.getenv("CHROMA_HOST"),
-        port=os.getenv("CHROMA_PORT"),
-        settings=Settings(),
-    )
-    chroma_db = Chroma(
-        client=client,
-        collection_name="dgmy_docs",
-        embedding_function=oai_embeddings,
-    )
+    chroma_db = get_vectorstore()
 
     # initialise record manager
     conn_str = os.getenv("REC_MGR_CONN_STR")
