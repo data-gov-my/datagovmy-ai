@@ -82,3 +82,13 @@ jobs:
       - run: pip install -r requirements.txt
       # Account-agnostic synth: no credentials needed
       - run: npx --yes aws-cdk@2.1145.0 synth --quiet
+      # Again with every optional path on (alarms, UI, public ALB), which the
+      # committed config may not exercise
+      - run: >-
+          npx --yes aws-cdk@2.1145.0 synth --quiet -o cdk.out.all
+          -c publicAlb=true
+          -c 'staging={"apiDesiredCount":1,"alarms":true}'
+          -c 'prod={"apiDesiredCount":2,"apiMaxCount":4,"alarms":true}'
+        env:
+          CERTIFICATE_ARN: arn:aws:acm:ap-southeast-5:000000000000:certificate/placeholder
+          DATAGPT_UI_IMAGE: public.ecr.aws/docker/library/nginx:1.27

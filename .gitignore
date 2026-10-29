@@ -53,3 +53,4 @@ data/*record.parquet
 infra/cdk.out/
 # Context lookups record account IDs; the repo is public
 infra/cdk.context.json
+infra/cdk.out.all/
