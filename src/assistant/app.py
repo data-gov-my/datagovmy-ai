@@ -1,14 +1,11 @@
-from fastapi import Depends, FastAPI, status
+from fastapi import Depends, FastAPI, HTTPException, status
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security.api_key import APIKey
 from fastapi_cache import FastAPICache
-from fastapi_cache.backends.redis import RedisBackend
-
-from redis import asyncio as aioredis
+from fastapi_cache.backends.inmemory import InMemoryBackend
 
 from langserve import add_routes
-from langserve.schema import CustomUserType
 
 from langchain_core.runnables import RunnableConfig
 
@@ -23,18 +20,13 @@ from schema import (
     HealthCheck,
     TokenUpdate,
     TokenUpdateResponse,
-    ChainType,
-    Message,
     GenerateMetaResponse,
-    DatasetMetadata,
 )
-from chain import create_new_chain
+from chain import build_rag_graph, create_chat_runnable
+from utils.helpers import parse_cors_origins
 from generate_meta import build_generate_meta_graph, build_translation_keys
 
 load_dotenv()
-
-# maximum history of messages for memory
-MAX_MESSAGES = 5
 
 
 class EndpointFilter(logging.Filter):
@@ -45,33 +37,34 @@ class EndpointFilter(logging.Filter):
 logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
 
 
-class NewChatReqest(CustomUserType):
-    # chain_type: ChainType = ChainType.DOCS
-    messages: list
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    redis = await aioredis.from_url("redis://host.docker.internal:6381")
-    FastAPICache.init(RedisBackend(redis), prefix="")
+    # Per-process cache: each task (or uvicorn process) keeps its own
+    FastAPICache.init(InMemoryBackend(), prefix="")
     yield
 
 
 app = FastAPI(lifespan=lifespan)
+cors_origins = parse_cors_origins(os.getenv("BACKEND_CORS_ORIGINS"))
+# Origins aren't secret (browsers send them); log them so a bad value shows up
+# at deploy time rather than as rejected browser requests
+logging.getLogger("uvicorn.error").info("CORS allowed origins: %s", cors_origins)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.getenv("BACKEND_CORS_ORIGINS"),
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-rag_chain = create_new_chain()
+rag_graph = build_rag_graph()
 generate_meta_graph = build_generate_meta_graph()
 
+# LangServe contract kept for the existing frontend: {"messages": [...]} in,
+# answer string (streamed) out
 add_routes(
     app,
-    rag_chain,
+    create_chat_runnable(rag_graph),
     path="/chat",
     dependencies=[Depends(get_token)],
 )
@@ -92,11 +85,6 @@ async def generate_meta(payload: GenerateMetaRequest):
     return GenerateMetaResponse(
         metadata=dataset_meta,
     )
-
-
-@app.get("/health", response_model=HealthCheck)
-def get_health():
-    return HealthCheck(status="OK")
 
 
 @app.post(
