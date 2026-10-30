@@ -3,8 +3,10 @@
 # does nothing until the PLATFORM_DEPLOY_ENABLED repository variable is "true".
 #
 # GitHub setup (see infra/README.md):
-#   repository variables: PLATFORM_DEPLOY_ENABLED, AWS_ACCOUNT_ID, EDGE_CONFIG,
-#                         DATAGPT_UI_IMAGE, CERTIFICATE_ARN (publicAlb only)
+#   repository variables: PLATFORM_DEPLOY_ENABLED, DATAGPT_UI_IMAGE,
+#                         CERTIFICATE_ARN (publicAlb only)
+#   repository secrets:   AWS_ACCOUNT_ID, EDGE_CONFIG (not sensitive, but secrets
+#                         are masked in the public logs)
 #   environment "staging":    vars AWS_ROLE_ARN, BASE_URL (https://ai.datagovmy.app:8443);
 #                             secret SMOKE_CHAT_TOKEN
 #   environment "production": vars AWS_ROLE_ARN, BASE_URL (https://ai.datagovmy.app:8005);
@@ -30,8 +32,8 @@ concurrency:
 env:
   AWS_REGION: ap-southeast-5
   CDK_VERSION: 2.1145.0
-  CDK_DEPLOY_ACCOUNT: ${{ vars.AWS_ACCOUNT_ID }}
-  EDGE_CONFIG: ${{ vars.EDGE_CONFIG }}
+  CDK_DEPLOY_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+  EDGE_CONFIG: ${{ secrets.EDGE_CONFIG }}
   CERTIFICATE_ARN: ${{ vars.CERTIFICATE_ARN }}
   DATAGPT_UI_IMAGE: ${{ vars.DATAGPT_UI_IMAGE }}
 
