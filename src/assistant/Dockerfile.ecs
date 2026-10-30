@@ -1,0 +1,25 @@
+# Image for the ECS platform (infra/). The API and the ingest task share it;
+# ingest overrides the command with `python ingest.py`.
+# The Singapore host still builds `Dockerfile` until it's decommissioned.
+
+FROM python:3.11-slim-bookworm AS build
+ENV PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1
+RUN python -m venv /venv
+COPY requirements.txt /tmp/requirements.txt
+RUN /venv/bin/pip install -r /tmp/requirements.txt
+
+FROM python:3.11-slim-bookworm
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH=/venv/bin:$PATH
+RUN useradd --create-home --uid 10001 app
+COPY --from=build /venv /venv
+WORKDIR /app
+COPY --chown=app:app . /app
+USER app
+
+EXPOSE 8000
+# Keep-alive above the ALB idle timeout (300 s) so the ALB never reuses a
+# connection uvicorn has just closed (avoids sporadic 502s)
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", \
+     "--proxy-headers", "--forwarded-allow-ips", "*", "--timeout-keep-alive", "310"]
