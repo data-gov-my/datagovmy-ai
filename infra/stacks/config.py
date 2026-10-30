@@ -120,6 +120,8 @@ PLACEHOLDER_EDGE = EdgeConfig(
         port: f"arn:aws:elasticloadbalancing:{EDGE_REGION}:{PLACEHOLDER_ACCOUNT}:targetgroup/placeholder-{port}/0000000000000000"
         for port in ("443", "8005", "3001")
     },
+    # TEST-NET-1 (RFC 5737): never routable
+    legacy_auth_token_url="http://192.0.2.1:8005/auth-token",
     placeholder=True,
 )
 
