@@ -70,7 +70,8 @@ otherwise), and `DATAGPT_UI_IMAGE` set to the same value CI uses.
 4. **GitHub** (repo admin):
    - Environments `staging`, `production` and `ingest`, each with deployment branches limited to `main`. Add required reviewers to `production`.
    - In each environment, `AWS_ROLE_ARN` from the `DatagovmyAi-Ci` outputs (`ingest` uses the ingest role). `BASE_URL`: `https://ai.datagovmy.app:8443` in `staging`, `https://ai.datagovmy.app:8005` in `production`. Secret `SMOKE_CHAT_TOKEN` in `staging` (the staging `AUTH_TOKEN` value).
-   - Repository variables `AWS_ACCOUNT_ID`, `EDGE_CONFIG`, `DATAGPT_UI_IMAGE`, and `PLATFORM_DEPLOY_ENABLED=true` when ready.
+   - Repository secrets `AWS_ACCOUNT_ID` and `EDGE_CONFIG`. Neither is sensitive, but as secrets they're masked in the public Actions logs.
+   - Repository variables `DATAGPT_UI_IMAGE`, and `PLATFORM_DEPLOY_ENABLED=true` when ready.
    - Settings → Actions → require approval for fork pull request workflows from all outside contributors.
 5. **Push an image** (run `deploy.yml`, or build `src/assistant/Dockerfile.ecs` for `linux/arm64` and push it to the ECR repo), then deploy the service stacks with that tag.
 6. **Bootstrap the databases**, once per environment. The task creates the database, a read-only API user and an ingest user, and writes `DATABASE_URL` / `DATABASE_URL_INGEST` to SSM; nobody sees the passwords. Re-running it is safe (`ROTATE=true` forces new passwords).
