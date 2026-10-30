@@ -26,8 +26,8 @@ jobs:
       run:
         working-directory: infra
     env:
-      CDK_DEPLOY_ACCOUNT: ${{ vars.AWS_ACCOUNT_ID }}
-      EDGE_CONFIG: ${{ vars.EDGE_CONFIG }}
+      CDK_DEPLOY_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+      EDGE_CONFIG: ${{ secrets.EDGE_CONFIG }}
       CERTIFICATE_ARN: ${{ vars.CERTIFICATE_ARN }}
       DATAGPT_UI_IMAGE: ${{ vars.DATAGPT_UI_IMAGE }}
     steps:
