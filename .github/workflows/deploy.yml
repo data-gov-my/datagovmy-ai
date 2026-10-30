@@ -1,0 +1,119 @@
+# Build once, deploy to staging, smoke test, then prod after approval.
+# Runs alongside the old CodeDeploy workflow (workflow.yml) until cutover, and
+# does nothing until the PLATFORM_DEPLOY_ENABLED repository variable is "true".
+#
+# GitHub setup (see infra/README.md):
+#   repository variables: PLATFORM_DEPLOY_ENABLED, AWS_ACCOUNT_ID, EDGE_CONFIG,
+#                         DATAGPT_UI_IMAGE, CERTIFICATE_ARN (publicAlb only)
+#   environment "staging":    vars AWS_ROLE_ARN, BASE_URL (https://ai.datagovmy.app:8443);
+#                             secret SMOKE_CHAT_TOKEN
+#   environment "production": vars AWS_ROLE_ARN, BASE_URL (https://ai.datagovmy.app:8005);
+#                             required reviewers
+#   both environments: deployment branches limited to main
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["docs/**", "**/*.md"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+# Shared with infra.yml so stack updates never overlap
+concurrency:
+  group: platform-deploy
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ap-southeast-5
+  CDK_VERSION: 2.1145.0
+  CDK_DEPLOY_ACCOUNT: ${{ vars.AWS_ACCOUNT_ID }}
+  EDGE_CONFIG: ${{ vars.EDGE_CONFIG }}
+  CERTIFICATE_ARN: ${{ vars.CERTIFICATE_ARN }}
+  DATAGPT_UI_IMAGE: ${{ vars.DATAGPT_UI_IMAGE }}
+
+jobs:
+  staging:
+    if: vars.PLATFORM_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-24.04-arm
+    environment: staging
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@03f1aad4c6c7ffd436567f42f9384779290529bd # v2.1.7
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: src/assistant
+          file: src/assistant/Dockerfile.ecs
+          platforms: linux/arm64
+          push: true
+          tags: ${{ steps.ecr.outputs.registry }}/datagovmy-ai:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: infra/requirements.txt
+      - run: pip install -r infra/requirements.txt
+      - name: Deploy staging
+        working-directory: infra
+        run: >-
+          npx --yes "aws-cdk@$CDK_VERSION" deploy DatagovmyAi-Service-staging
+          --exclusively --require-approval never
+          --parameters "DatagovmyAi-Service-staging:ImageTag=$GITHUB_SHA"
+      - name: Smoke test
+        env:
+          BASE_URL: ${{ vars.BASE_URL }}
+          SMOKE_CHAT_TOKEN: ${{ secrets.SMOKE_CHAT_TOKEN }}
+        run: python infra/scripts/smoke_test.py "$BASE_URL"
+
+  prod:
+    needs: staging
+    runs-on: ubuntu-24.04
+    environment: production
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: infra/requirements.txt
+      - run: pip install -r infra/requirements.txt
+      # Same image the staging job built and tested
+      - name: Deploy prod
+        working-directory: infra
+        run: >-
+          npx --yes "aws-cdk@$CDK_VERSION" deploy DatagovmyAi-Service-prod
+          --exclusively --require-approval never
+          --parameters "DatagovmyAi-Service-prod:ImageTag=$GITHUB_SHA"
+      # No chat token in prod: contract checks only, no model calls. The
+      # header reaches the new stack through the Singapore ALB even before
+      # any users are moved to it.
+      - name: Smoke test
+        env:
+          BASE_URL: ${{ vars.BASE_URL }}
+          SMOKE_HEADER: "x-datagovmy-backend: ecs"
+        run: python infra/scripts/smoke_test.py "$BASE_URL"

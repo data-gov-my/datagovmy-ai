@@ -1,4 +1,4 @@
-from langchain.text_splitter import (
+from langchain_text_splitters import (
     MarkdownHeaderTextSplitter,
     RecursiveCharacterTextSplitter,
 )
@@ -215,7 +215,9 @@ class DCMetaLoader(BaseLoader):
 
         # group column metadata in different formats
         dfmeta_byfile = dfmeta.groupby("id").first()
-        dfmeta_byfile["col_meta"] = dfmeta.groupby("id", include_groups=False).apply(
+        # include_groups belongs to apply(), not groupby()
+        by_id = dfmeta.groupby("id")
+        dfmeta_byfile["col_meta"] = by_id.apply(
             lambda group_df: "\n".join(
                 group_df.apply(
                     lambda row: row.var_title_en.strip()
@@ -223,11 +225,10 @@ class DCMetaLoader(BaseLoader):
                     + row.var_description_en.strip(),
                     axis=1,
                 )
-            )
+            ),
+            include_groups=False,
         )
-        dfmeta_byfile["col_meta_clean"] = dfmeta.groupby(
-            "id", include_groups=False
-        ).apply(
+        dfmeta_byfile["col_meta_clean"] = by_id.apply(
             lambda group_df: " ".join(
                 group_df.apply(
                     lambda row: row.var_title_en.strip()
@@ -235,14 +236,14 @@ class DCMetaLoader(BaseLoader):
                     + row.var_description_en.strip(),
                     axis=1,
                 )
-            )
+            ),
+            include_groups=False,
         )
-        dfmeta_byfile["col_meta_dict"] = dfmeta.groupby(
-            "id", include_groups=False
-        ).apply(
+        dfmeta_byfile["col_meta_dict"] = by_id.apply(
             lambda group_df: group_df[
                 ["var_name", "col_data_type", "col_description"]
-            ].to_dict(orient="records")
+            ].to_dict(orient="records"),
+            include_groups=False,
         )
 
         dfmeta_numcols = [
@@ -260,9 +261,7 @@ class DCMetaLoader(BaseLoader):
             lambda row: (
                 str(int(row["dataset_begin"]))
                 if row.date_range_int == 0
-                else str(int(row["dataset_begin"]))
-                + "-"
-                + str(int(row["dataset_begin"]))
+                else str(int(row["dataset_begin"])) + "-" + str(int(row["dataset_end"]))
             ),
             axis=1,
         )

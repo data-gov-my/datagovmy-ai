@@ -1,8 +1,8 @@
 from enum import StrEnum
 from pydantic import BaseModel, constr, Field, ConfigDict
 from typing_extensions import List, TypedDict
-from typing import Optional, Dict
-from langchain.schema import Document
+from typing import Literal, Optional, Dict
+from langchain_core.documents import Document
 
 
 class Role(StrEnum):
@@ -26,6 +26,46 @@ class Message(BaseModel):
 class ChatRequest(BaseModel):
     chain_type: ChainType = ChainType.DOCS
     messages: list[Message]
+
+
+class Intent(StrEnum):
+    DOCS = "docs"
+    SMALLTALK = "smalltalk"
+    UNCLEAR = "unclear"
+    OFF_TOPIC = "off_topic"
+    BLOCKED = "blocked"
+
+
+class DeclineReason(StrEnum):
+    UNRELATED_TOPIC = "unrelated_topic"
+    UNRELATED_CODE = "unrelated_code"
+    INSTRUCTION_OVERRIDE = "instruction_override"
+    IMPERSONATION = "impersonation"
+    POLITICAL_OR_PERSONAL = "political_or_personal"
+    HARMFUL = "harmful"
+
+
+class QueryAnalysis(BaseModel):
+    """Structured output of the query analysis step in the docs RAG graph"""
+
+    intent: Intent = Field(description="Category of the latest user message")
+    language: Literal["en", "ms"] = Field(
+        description="Language of the latest user message"
+    )
+    standalone_question: str = Field(
+        description="Sanitised, self-contained rewrite of the latest user message"
+    )
+    search_queries: List[str] = Field(
+        default_factory=list,
+        description="Search queries in English for the documentation vectorstore",
+    )
+    decline_reason: Optional[DeclineReason] = Field(
+        default=None, description="For off_topic and blocked: why it is declined"
+    )
+    topic: str = Field(
+        default="",
+        description="For off_topic only: neutral label of what was asked, at most 6 words",
+    )
 
 
 class HealthCheck(BaseModel):
