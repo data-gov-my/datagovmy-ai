@@ -27,7 +27,7 @@ services:
     volumes:
       - index_data:/chroma/.chroma/index
     ports:
-      - 8006:8000
+      - 127.0.0.1:8006:8000
     environment:
       - IS_PERSISTENT=TRUE
       - ALLOW_RESET=TRUE
