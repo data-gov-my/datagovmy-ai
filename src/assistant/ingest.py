@@ -10,7 +10,6 @@ Downside is need to load and parse everything regardless.
 """
 
 import os
-import requests
 import pandas as pd
 from contextlib import contextmanager
 from typing import Iterator, List, Optional
