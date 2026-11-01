@@ -4,6 +4,32 @@ import ast
 import json
 from typing import List, Optional
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+
+# HTTP
+_session: Optional[requests.Session] = None
+
+
+def http_session() -> requests.Session:
+    """Shared session that retries connection and TLS errors and 5xx/429.
+
+    A bare `requests.get` fails the whole ingest run on a single bad handshake
+    (seen intermittently from the Fargate task as `SSL: UNEXPECTED_MESSAGE`).
+    """
+    global _session
+    if _session is None:
+        retry = Retry(
+            total=5,
+            backoff_factor=1,
+            status_forcelist=(429, 500, 502, 503, 504),
+            allowed_methods=frozenset({"GET"}),
+        )
+        _session = requests.Session()
+        _session.mount("https://", HTTPAdapter(max_retries=retry))
+        _session.mount("http://", HTTPAdapter(max_retries=retry))
+    return _session
 
 
 # Config
@@ -109,7 +135,7 @@ def read_file_from_repo(repo: str, token: str, file_url: str):
     headers = {"Authorization": f"token {token}"}
 
     # Send the request
-    response = requests.get(file_url, headers=headers)
+    response = http_session().get(file_url, headers=headers, timeout=30)
     response.raise_for_status()
 
     return response.text
