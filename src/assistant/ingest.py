@@ -23,7 +23,7 @@ from langchain_core.documents import Document
 
 from loaders import MdxLoader, DashboardMetaLoader, DCMetaLoader
 from models import get_vectorstore
-from utils.helpers import send_telegram
+from utils.helpers import http_session, send_telegram
 
 load_dotenv()
 
@@ -40,7 +40,7 @@ def get_github_mdx(repo: str, folder_path: str, token: str) -> List:
     """Recurisve function to get list of mdx files from git"""
     api_url = f"https://api.github.com/repos/{repo}/contents/{folder_path}"
     headers = {"Authorization": f"token {token}"}
-    response = requests.get(api_url, headers=headers)
+    response = http_session().get(api_url, headers=headers, timeout=30)
     response.raise_for_status()
 
     contents = response.json()
