@@ -315,10 +315,7 @@ def build_rag_graph(
         kind = state["intent"]
         if kind not in CANNED_REPLIES:
             kind = "blocked"  # e.g. docs/smalltalk with an empty rewrite
-        # unclear messages are often a single word or random characters, too
-        # short to detect the language reliably, so reply in both
-        language = None if kind == Intent.UNCLEAR else state.get("language")
-        return {"answer": canned_reply(kind, language), "context": []}
+        return {"answer": canned_reply(kind, state.get("language")), "context": []}
 
     search_with_retry = RunnableLambda(search, name="DocsSearch").with_retry(
         stop_after_attempt=3
