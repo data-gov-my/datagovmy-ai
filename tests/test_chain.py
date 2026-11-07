@@ -266,11 +266,10 @@ def test_docs_with_empty_rewrite_is_refused():
     assert calls["answer"].messages == []
 
 
-def test_unclear_asks_to_clarify_in_both_languages():
+def test_unclear_asks_to_clarify_in_detected_language():
     graph, calls = make_graph(analysis("", Intent.UNCLEAR, language="ms"), {})
     out = run(graph, payload("Gill"))
-    unclear = CANNED_REPLIES["unclear"]
-    assert out["answer"] == unclear["en"] + "\n\n" + unclear["ms"]
+    assert out["answer"] == CANNED_REPLIES["unclear"]["ms"]
     assert calls["search"] == []
     assert calls["answer"].messages == [] and calls["decline"].messages == []
 
