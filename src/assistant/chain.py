@@ -84,6 +84,13 @@ DOCS_WITHOUT_PAGE = {"sample-query", "authentication"}
 # --- retrieval helpers ---
 
 
+def format_columns(dc_meta: dict) -> str:
+    """Column names, types and value lists, so the answer can say what a dataset
+    breaks down by (e.g. model, fuel) rather than only what it is about"""
+    columns = (dc_meta.get("col_meta_clean") or "").strip()
+    return f"\nColumns in this dataset: {columns}\n" if columns else ""
+
+
 def format_doc(doc: Document) -> str:
     """Create page_content to embed into context"""
     metadata = doc.metadata
@@ -102,6 +109,7 @@ def format_doc(doc: Document) -> str:
             data_methodology=dc_meta["data_methodology"],
             update_frequency=dc_meta["update_frequency"],
             data_caveat=dc_meta["data_caveat"],
+            columns=format_columns(dc_meta),
         )
     return doc.page_content + "\n\nSource: " + metadata["source"]
 

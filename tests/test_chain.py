@@ -13,6 +13,7 @@ from chain import (
     build_queries,
     build_rag_graph,
     create_chat_runnable,
+    format_doc,
     reciprocal_rank_fusion,
     sanitise_topic,
     source_info,
@@ -368,6 +369,39 @@ def test_stream_events_emit_sources_before_tokens():
         {"title": "Overview", "url": "https://developer.data.gov.my/data-catalogue"},
     ]
     assert "".join(e["data"] for e in events[1:]) == ANSWER
+
+
+def dc_doc(**overrides) -> Document:
+    header = {
+        "id": "registration_transactions_car",
+        "subcategory": "Vehicle Registrations",
+        "category": "Transportation",
+        "description": "Car registration transactions.",
+        "data_methodology": "One row per registration.",
+        "update_frequency": "daily",
+        "data_caveat": "Cars only.",
+        "exclude_openapi": True,
+        "col_meta_clean": "Car Model [String] Model of the car "
+        "Fuel [String] petrol, diesel or electricity ('electric')",
+        **overrides,
+    }
+    return Document(
+        page_content="x", metadata={"source": "dc_meta", "header": json.dumps(header)}
+    )
+
+
+def test_format_doc_includes_dataset_columns():
+    # both templates (with and without OpenAPI) must carry the columns, or the
+    # answer cannot say a dataset has model or fuel fields
+    for exclude_openapi in (True, False):
+        text = format_doc(dc_doc(exclude_openapi=exclude_openapi))
+        assert "Columns in this dataset: Car Model [String]" in text
+        assert "('electric')" in text
+
+
+def test_format_doc_without_columns_has_no_empty_section():
+    for columns in ("", None):
+        assert "Columns" not in format_doc(dc_doc(col_meta_clean=columns))
 
 
 def test_source_info_local_file_has_no_url():
