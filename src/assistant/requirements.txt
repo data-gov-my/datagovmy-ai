@@ -1,5 +1,6 @@
 fastapi==0.111.1
 langchain-core==1.7.0
+langsmith==0.14.17
 langchain-openai==1.7.2
 openai==3.37.0
 langchain-chroma==1.0.0
