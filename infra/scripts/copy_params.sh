@@ -67,8 +67,7 @@ cat <<EOF
 $copied copied, $skipped skipped.
 Still to create in $DST_REGION (SecureString):
   $DST_PREFIX/AUTH_TOKEN           rolling token. Staging: any test value.
-                                   Prod: nothing to do; the first token roll after
-                                   cutover step 2 writes it (infra/README.md).
+                                   Prod: nothing to do; the first token roll writes it.
   $DST_PREFIX/DATABASE_URL         read-only app user  (db_bootstrap.py task)
   $DST_PREFIX/DATABASE_URL_INGEST  read-write ingest user (db_bootstrap.py task)
 For staging, consider replacing MASTER_TOKEN_KEY with a staging-only value.

@@ -67,8 +67,7 @@ DISCORD_WEBHOOK_PARAM = f"/{PROJECT}/prod/DISCORD_WEBHOOK_URL"
 API_PORT = 8000  # container port
 # Ports on the internal NLB in Malaysia, which the Singapore ALB targets
 NLB_PORTS = {"prod": 8000, "staging": 8001}
-# Header that sends a request to the new stack whatever the cutover weight,
-# so it can be tested through the real hostname before any users move
+# Header that sends a request to the new stack regardless of traffic weights
 TEST_HEADER = ("x-datagovmy-backend", "ecs")
 
 
@@ -99,8 +98,7 @@ class EdgeConfig:
     # by listener port ("443", "8005", "3001")
     listeners: dict[str, str]
     legacy_target_groups: dict[str, str]
-    # Old host's /auth-token over the peering (private IP), so the new stack
-    # can forward token rolls to it during the cutover
+    # Legacy host's /auth-token URL, to which token rolls are forwarded
     legacy_auth_token_url: str = ""
     placeholder: bool = False
 

@@ -15,8 +15,7 @@ from .waf import ApiWebAcl
 
 class EdgeStack(Stack):
     """Singapore (ap-southeast-1): attaches the existing ALB that
-    ai.datagovmy.app points at to the new stack, so the cutover needs no DNS
-    change.
+    ai.datagovmy.app points at to the new stack, with no DNS change.
 
     The ALB, its listeners, certificate and legacy target groups were made in
     the console and stay that way; this stack only adds to them:
