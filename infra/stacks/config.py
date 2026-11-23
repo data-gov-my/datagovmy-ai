@@ -140,6 +140,9 @@ class Settings:
     db_instance_type: str
     datagpt_ui_image: str
     datagpt_ui_port: int
+    # more internal NLB ports the Singapore VPC may reach, for listeners
+    # added to the NLB outside these stacks
+    nlb_extra_ports: list[int]
     edge: EdgeConfig
     # percent of traffic the Singapore ALB sends to the new stack, by service
     edge_weights: dict[str, int]
@@ -233,6 +236,7 @@ def load_settings(scope: Construct) -> Settings:
         datagpt_ui_image=ctx("datagptUiImage")
         or os.environ.get("DATAGPT_UI_IMAGE", ""),
         datagpt_ui_port=int(ctx("datagptUiPort") or 3001),
+        nlb_extra_ports=[int(p) for p in ctx("nlbExtraPorts") or []],
         edge=edge,
         edge_weights={"api": weights.get("api", 0), "ui": weights.get("ui", 0)},
         edge_auth_token_to_new=auth_token_to_new,
