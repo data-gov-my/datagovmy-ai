@@ -29,6 +29,7 @@
     "wafMode": "COUNT",
     "dbInstanceType": "t4g.small",
     "datagptUiPort": 3001,
+    "nlbExtraPorts": [8010],
     "staging": {
       "apiDesiredCount": 1,
       "apiMaxCount": 1,
