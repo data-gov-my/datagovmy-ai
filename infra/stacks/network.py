@@ -93,7 +93,7 @@ class NetworkStack(Stack):
         self.nlb_sg = ec2.SecurityGroup(
             self, "NlbSg", vpc=self.vpc, description="Internal NLB (Singapore ALB)"
         )
-        for port in [*NLB_PORTS.values(), ui_port]:
+        for port in [*NLB_PORTS.values(), ui_port, *settings.nlb_extra_ports]:
             self.nlb_sg.add_ingress_rule(
                 ec2.Peer.ipv4(edge.vpc_cidr), ec2.Port.tcp(port), f"edge {port}"
             )
