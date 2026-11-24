@@ -23,6 +23,7 @@ from schema import (
     GenerateMetaResponse,
 )
 from chain import build_rag_graph, create_chat_runnable
+from utils.favicon import router as favicon_router
 from utils.helpers import parse_cors_origins
 from generate_meta import build_generate_meta_graph, build_translation_keys
 
@@ -56,6 +57,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(favicon_router)
 
 rag_graph = build_rag_graph()
 generate_meta_graph = build_generate_meta_graph()
